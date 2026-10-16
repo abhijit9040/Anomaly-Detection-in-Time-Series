@@ -1,0 +1,790 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>PRD — Anomaly Detection in Time Series</title>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --primary: #0f3460;
+      --accent: #e94560;
+      --bg: #ffffff;
+      --text: #1a1a2e;
+      --muted: #666;
+      --border: #d0d0d0;
+      --row-alt: #f4f6fa;
+      --code-bg: #eef1f7;
+    }
+
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+
+    body {
+      font-family: 'Inter', 'Segoe UI', Arial, sans-serif;
+      color: var(--text);
+      line-height: 1.7;
+      font-size: 11pt;
+      background: var(--bg);
+      padding: 0;
+    }
+
+    .page-container {
+      max-width: 850px;
+      margin: 0 auto;
+      padding: 20px 40px;
+    }
+
+    /* ── Cover ────────────────────────────────────── */
+    .cover {
+      text-align: center;
+      padding: 70px 20px 50px;
+      border-bottom: 3px solid var(--primary);
+      margin-bottom: 30px;
+      page-break-after: always;
+    }
+    .cover h1 {
+      font-size: 30pt;
+      font-weight: 800;
+      color: var(--primary);
+      border: none;
+      margin-bottom: 6px;
+      letter-spacing: -0.5px;
+    }
+    .cover .subtitle {
+      font-size: 16pt;
+      color: var(--accent);
+      font-weight: 500;
+      margin-bottom: 30px;
+    }
+    .cover .meta-grid {
+      display: inline-block;
+      text-align: left;
+      font-size: 10pt;
+      color: var(--muted);
+      line-height: 2.2;
+      background: var(--row-alt);
+      border-radius: 8px;
+      padding: 18px 30px;
+    }
+    .cover .meta-grid strong { color: var(--primary); }
+    .cover .version {
+      margin-top: 26px;
+      font-size: 9pt;
+      color: #999;
+    }
+
+    /* ── Headings ─────────────────────────────────── */
+    h1 {
+      color: var(--primary);
+      font-weight: 700;
+      font-size: 22pt;
+      border-bottom: 3px solid var(--primary);
+      padding-bottom: 8px;
+      margin-top: 40px;
+      margin-bottom: 16px;
+    }
+    h2 {
+      color: var(--primary);
+      font-weight: 600;
+      font-size: 15pt;
+      border-bottom: 1.5px solid #e0e0e0;
+      padding-bottom: 6px;
+      margin-top: 30px;
+      margin-bottom: 14px;
+    }
+    h3 {
+      color: var(--text);
+      font-weight: 600;
+      font-size: 12pt;
+      margin-top: 22px;
+      margin-bottom: 10px;
+    }
+
+    /* ── Tables ───────────────────────────────────── */
+    table {
+      border-collapse: collapse;
+      width: 100%;
+      margin: 14px 0;
+      font-size: 9.5pt;
+    }
+    th {
+      background-color: var(--primary);
+      color: #fff;
+      font-weight: 600;
+      text-align: left;
+      padding: 9px 12px;
+    }
+    td {
+      border: 1px solid var(--border);
+      padding: 8px 12px;
+      vertical-align: top;
+    }
+    tr:nth-child(even) { background-color: var(--row-alt); }
+
+    /* ── Code / Pre ───────────────────────────────── */
+    code {
+      background: var(--code-bg);
+      padding: 1px 5px;
+      border-radius: 3px;
+      font-size: 9.5pt;
+      color: var(--primary);
+      font-family: 'Consolas', 'Courier New', monospace;
+    }
+    pre {
+      background: var(--row-alt);
+      border: 1px solid var(--border);
+      border-radius: 4px;
+      padding: 14px 18px;
+      font-size: 9pt;
+      overflow-x: auto;
+      font-family: 'Consolas', 'Courier New', monospace;
+      line-height: 1.6;
+      white-space: pre;
+    }
+
+    /* ── Callouts ─────────────────────────────────── */
+    .callout {
+      border-left: 4px solid var(--accent);
+      background: #fff5f5;
+      padding: 12px 18px;
+      margin: 16px 0;
+      font-size: 10pt;
+      border-radius: 0 6px 6px 0;
+    }
+    .callout.info {
+      border-left-color: #2196f3;
+      background: #f0f7ff;
+    }
+    .callout strong { color: var(--accent); }
+    .callout.info strong { color: #1565c0; }
+
+    /* ── Lists ────────────────────────────────────── */
+    ul, ol { margin: 8px 0; padding-left: 24px; }
+    li { margin-bottom: 5px; }
+
+    /* ── Blockquote (User Story Acceptance) ───────── */
+    blockquote {
+      border-left: 3px solid #ccc;
+      padding: 6px 14px;
+      margin: 8px 0 14px 10px;
+      color: #444;
+      font-size: 9.5pt;
+      background: #fafafa;
+    }
+
+    /* ── Section Divider ─────────────────────────── */
+    hr {
+      border: none;
+      border-top: 2px solid #e0e0e0;
+      margin: 34px 0;
+    }
+
+    /* ── Scope Tags ───────────────────────────────── */
+    .scope-in { color: #2e7d32; font-weight: 600; }
+    .scope-out { color: #c62828; font-weight: 600; }
+
+    /* ── Footer ───────────────────────────────────── */
+    .doc-footer {
+      text-align: center;
+      padding: 34px 0 16px;
+      color: #999;
+      font-size: 9pt;
+      border-top: 1px solid #e0e0e0;
+      margin-top: 40px;
+    }
+
+    /* ── TOC ──────────────────────────────────────── */
+    .toc {
+      background: var(--row-alt);
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      padding: 18px 26px;
+      margin: 10px 0 30px;
+    }
+    .toc ol { padding-left: 20px; }
+    .toc li { margin-bottom: 4px; font-size: 10pt; }
+    .toc a { color: var(--primary); text-decoration: none; }
+    .toc a:hover { text-decoration: underline; }
+
+    /* ── Print ────────────────────────────────────── */
+    @media print {
+      body { padding: 0; font-size: 10pt; }
+      .page-container { padding: 0 20px; max-width: 100%; }
+      .cover { page-break-after: always; }
+      h1, h2 { page-break-after: avoid; }
+      table, pre { page-break-inside: avoid; }
+      .no-print { display: none; }
+    }
+
+    /* ── Print button ─────────────────────────────── */
+    .print-btn {
+      position: fixed;
+      bottom: 30px;
+      right: 30px;
+      background: var(--primary);
+      color: #fff;
+      border: none;
+      padding: 14px 24px;
+      border-radius: 8px;
+      font-size: 12pt;
+      font-weight: 600;
+      cursor: pointer;
+      box-shadow: 0 4px 16px rgba(15,52,96,0.3);
+      z-index: 100;
+      transition: transform 0.2s, box-shadow 0.2s;
+    }
+    .print-btn:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 6px 20px rgba(15,52,96,0.4);
+    }
+  </style>
+</head>
+<body>
+
+<button class="print-btn no-print" onclick="window.print()">📄 Save as PDF</button>
+
+<div class="page-container">
+
+<!-- ═══════════════ COVER ═══════════════ -->
+<div class="cover">
+  <h1 style="border:none;">Product Requirements Document</h1>
+  <div class="subtitle">Anomaly Detection in Sensor / IoT Time Series Data</div>
+  <div class="meta-grid">
+    <strong>Track:</strong> Advanced Data Science &nbsp;&nbsp;|&nbsp;&nbsp; <strong>Domain:</strong> Industrial IoT / Manufacturing<br>
+    <strong>Duration:</strong> 12 Weeks &nbsp;&nbsp;|&nbsp;&nbsp; <strong>Team Size:</strong> 1 &nbsp;&nbsp;|&nbsp;&nbsp; <strong>Level:</strong> Advanced<br>
+    <strong>Stack:</strong> Python, JavaScript &nbsp;&nbsp;|&nbsp;&nbsp; <strong>Frameworks:</strong> PyTorch, FastAPI, React<br>
+    <strong>Libraries:</strong> pandas, Plotly, Tailwind CSS, Axios
+  </div>
+  <div class="version">Document Version 1.0 &nbsp;|&nbsp; September 2026</div>
+</div>
+
+<!-- ═══════════════ TOC ═══════════════ -->
+<div class="toc">
+  <h3 style="margin-top:0;">Table of Contents</h3>
+  <ol>
+    <li><a href="#s1">Product Goal</a></li>
+    <li><a href="#s2">Problem Statement</a></li>
+    <li><a href="#s3">Architecture Rationale</a></li>
+    <li><a href="#s4">Target Users / Personas</a></li>
+    <li><a href="#s5">Research Grounding</a></li>
+    <li><a href="#s6">Dataset</a></li>
+    <li><a href="#s7">Deliverables (Mandatory)</a></li>
+    <li><a href="#s8">Features (Prioritized)</a></li>
+    <li><a href="#s9">User Stories</a></li>
+    <li><a href="#s10">Evaluation &amp; Success Metrics</a></li>
+    <li><a href="#s11">Non-Functional Requirements</a></li>
+    <li><a href="#s12">Scope Boundary</a></li>
+    <li><a href="#s13">Product Principles</a></li>
+    <li><a href="#s14">Core Data / ML Lifecycle</a></li>
+    <li><a href="#s15">Dependencies on Other Documents</a></li>
+    <li><a href="#s16">Phased Delivery</a></li>
+    <li><a href="#s17">Traceability Summary</a></li>
+    <li><a href="#s18">Distinction Criteria</a></li>
+  </ol>
+</div>
+
+<hr>
+
+<!-- ═══════════════ 1 ═══════════════ -->
+<h1 id="s1">1. Product Goal</h1>
+<p>
+  Deliver a full-stack application that enables <strong>Operations teams and predictive-maintenance engineers</strong>
+  in Industrial IoT / Manufacturing to <strong>detect anomalies in multi-sensor time-series data in real time</strong>,
+  using an LSTM autoencoder model grounded in the paper
+  <em>"LSTM-based Encoder-Decoder for Multi-sensor Anomaly Detection — ICML 2016"</em>.
+</p>
+<p>The system must produce:</p>
+<ul>
+  <li>A <strong>trained anomaly detector</strong> (LSTM autoencoder)</li>
+  <li>A <strong>real-time monitoring dashboard</strong> (React + Plotly)</li>
+  <li>A <strong>quantitative F1 evaluation report</strong></li>
+</ul>
+<p>All wrapped in a working <strong>React frontend + FastAPI backend</strong> application.</p>
+
+<hr>
+
+<!-- ═══════════════ 2 ═══════════════ -->
+<h1 id="s2">2. Problem Statement</h1>
+<p>
+  Industrial manufacturing environments generate continuous multi-sensor time-series data
+  (temperature, vibration, pressure, etc.). Undetected anomalies in this data lead to:
+</p>
+<ul>
+  <li><strong>Unplanned equipment downtime</strong> — costing thousands of dollars per hour.</li>
+  <li><strong>Missed early-warning signals</strong> — that could have triggered preventive maintenance.</li>
+  <li><strong>Manual monitoring</strong> — that is inconsistent, error-prone, and does not scale across hundreds of sensors.</li>
+</ul>
+<p>
+  This product provides an <strong>automated, model-driven anomaly detection signal</strong>
+  displayed on a real-time dashboard for human review and action.
+</p>
+<p>
+  <strong>Critical distinction — predictive, not reactive:</strong> The LSTM autoencoder does not detect failures that have already happened.
+  It detects <em>subtle deviations in sensor behavior patterns</em> that are precursors to failure. A rising reconstruction error
+  on a vibration sensor, for example, may indicate bearing wear days before the bearing actually fails. The model gives
+  operations teams a window to act <em>before</em> damage occurs — this is the core value of predictive maintenance over
+  reactive repair.
+</p>
+
+<hr>
+
+<!-- ═══════════════ 3 ═══════════════ -->
+<h1 id="s3">3. Architecture Rationale</h1>
+<p>This section addresses three foundational design questions about the system architecture.</p>
+
+<h2>3.1 Why does this project need APIs?</h2>
+<p>
+  The LSTM autoencoder model is a Python/PyTorch artifact. The monitoring dashboard is a React (JavaScript) frontend.
+  These two cannot communicate directly — a backend API is the bridge between them. Specifically, FastAPI serves the following purposes:
+</p>
+<ul>
+  <li><strong>Decoupling:</strong> The frontend does not load or execute the PyTorch model. It sends a time-series window to <code>POST /api/v1/detect</code> and receives a structured JSON response (anomaly flag, reconstruction error, sensor breakdown). This separation means the model can be retrained, versioned, or swapped without changing a single line of frontend code.</li>
+  <li><strong>Standardized interface:</strong> The API defines a contract — input schema, output schema, error codes — that any client (dashboard, batch script, mobile app, third-party system) can consume. Without this, every consumer would need direct access to the PyTorch runtime.</li>
+  <li><strong>Operational concerns:</strong> Authentication (FR-007), health checks (FR-008), input validation (Pydantic), structured error responses, and request logging all live in the API layer. These cannot exist in a standalone model script.</li>
+  <li><strong>Versioning &amp; rollback:</strong> The API response includes model version metadata. When a new model is deployed, the API serves it; if it underperforms, the previous version can be restored (FR-015) without frontend changes.</li>
+</ul>
+<p><em>Without the API layer, the trained model is a file on disk that no one outside the data science team can use.</em></p>
+
+<h2>3.2 How does real-time monitoring work with the ML model?</h2>
+<p>The monitoring dashboard does not run the ML model. The data flow is:</p>
+<pre>
+  Dataset (NAB/SMD)                    React Dashboard (Plotly)
+       |                                        ^
+       | replay at                               | poll every N seconds
+       | configurable                            | (or WebSocket push)
+       | interval                                |
+       v                                        |
+  FastAPI Backend  ──── LSTM Model ────▶  JSON Response
+  (receives window)    (compute recon.     (anomaly flag,
+                        error, compare      error score,
+                        to threshold)       sensor breakdown)
+</pre>
+<p>Step by step:</p>
+<ol>
+  <li><strong>Data replay:</strong> Since this project uses a static dataset (NAB/SMD), the backend replays sensor windows at a configurable interval to simulate a live data stream. In a production environment, this would be replaced by an MQTT/Kafka ingestion layer (currently out of scope).</li>
+  <li><strong>Inference:</strong> For each window, the backend passes the normalized sensor data through the LSTM encoder-decoder. The reconstruction error per sensor is computed.</li>
+  <li><strong>Threshold comparison:</strong> If the total reconstruction error exceeds the pre-selected threshold (chosen on the validation set), the window is flagged as anomalous.</li>
+  <li><strong>API response:</strong> The backend returns: anomaly flag (boolean), total reconstruction error (float), per-sensor error breakdown (array), model version, and timestamp.</li>
+  <li><strong>Dashboard rendering:</strong> The React frontend polls the API at a configurable interval (default: every few seconds), updates the Plotly charts (sensor streams, reconstruction error over time), and highlights anomaly markers with color + icon.</li>
+</ol>
+<p><em>The "real-time" aspect is the continuous polling loop between the frontend and backend — not a live sensor connection.</em></p>
+
+<h2>3.3 If an issue has already happened, is there still a need for the model?</h2>
+<p>
+  This is the most important question. The answer is: <strong>the model does not detect issues that have already caused damage — it detects the early signals that precede them.</strong>
+</p>
+<ul>
+  <li><strong>Anomaly is not failure.</strong> An anomaly is a deviation from normal sensor behavior. A vibration sensor reading that is 15% higher than its trained normal pattern is anomalous — but the machine is still running. Without the model, this deviation goes unnoticed until the bearing fails hours or days later.</li>
+  <li><strong>The labeled anomalies in the NAB/SMD dataset</strong> represent exactly these precursor windows — they mark periods where sensor behavior deviates from normal <em>before</em> or <em>during</em> an incident, not after the equipment is already destroyed.</li>
+  <li><strong>Business value:</strong> The cost of a detected anomaly (scheduled maintenance during a planned window) is orders of magnitude lower than the cost of an undetected anomaly (unplanned downtime, emergency repair, production loss, safety risk).</li>
+  <li><strong>Even for post-incident analysis:</strong> When an incident does occur, the model's historical reconstruction error timeline shows exactly when the deviation started and which sensors contributed — enabling root cause analysis and preventing recurrence.</li>
+</ul>
+<p><em>The model turns invisible sensor drift into a visible, actionable alert before damage occurs. That is the entire justification for this project.</em></p>
+
+<hr>
+
+<!-- ═══════════════ 4 ═══════════════ -->
+<h1 id="s4">4. Target Users / Personas</h1>
+<table>
+  <thead>
+    <tr><th>Persona</th><th>Role</th><th>Goal</th><th>Pain Point</th></tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td>Plant Operations Manager</td>
+      <td>Monitors overall equipment health</td>
+      <td>See real-time anomaly alerts across sensors to prevent downtime</td>
+      <td>Manual log review; anomalies discovered too late</td>
+    </tr>
+    <tr>
+      <td>Maintenance Technician</td>
+      <td>Inspects and repairs equipment</td>
+      <td>Know <em>which</em> sensor/component triggered an anomaly and <em>why</em></td>
+      <td>No root-cause signal; reactive not proactive</td>
+    </tr>
+    <tr>
+      <td>Data Scientist / ML Engineer</td>
+      <td>Builds and validates the anomaly model</td>
+      <td>Evaluate model with rigorous metrics; reproduce results</td>
+      <td>Lack of standardized evaluation and experiment tracking</td>
+    </tr>
+    <tr>
+      <td>System Administrator</td>
+      <td>Manages app access and deployment</td>
+      <td>Ensure only authorized personnel access dashboards</td>
+      <td>No authentication on monitoring tools</td>
+    </tr>
+  </tbody>
+</table>
+
+<hr>
+
+<!-- ═══════════════ 4 ═══════════════ -->
+<h1 id="s5">5. Research Grounding</h1>
+<table>
+  <thead>
+    <tr><th style="width:25%;">Item</th><th>Detail</th></tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td><strong>Paper</strong></td>
+      <td><em>LSTM-based Encoder-Decoder for Multi-sensor Anomaly Detection — ICML 2016</em></td>
+    </tr>
+    <tr>
+      <td><strong>Link</strong></td>
+      <td><a href="https://arxiv.org/search/?query=LSTM-based+Encoder-Decoder+for+Multi-sensor+Anomaly+Detection&searchtype=all" target="_blank">arXiv Search</a></td>
+    </tr>
+    <tr>
+      <td><strong>Core Idea</strong></td>
+      <td>An LSTM encoder compresses a window of multi-sensor time-series into a fixed-length latent representation; an LSTM decoder reconstructs the original window. High <strong>reconstruction error</strong> on unseen data indicates an anomaly.</td>
+    </tr>
+    <tr>
+      <td><strong>Implementation Note</strong></td>
+      <td>The paper provides the conceptual architecture. The PyTorch implementation may differ in specific layer sizes, training hyperparameters, or optimization strategy. Do not claim the paper specifies the exact implementation.</td>
+    </tr>
+  </tbody>
+</table>
+
+<hr>
+
+<!-- ═══════════════ 5 ═══════════════ -->
+<h1 id="s6">6. Dataset</h1>
+<table>
+  <thead>
+    <tr><th style="width:25%;">Item</th><th>Detail</th></tr>
+  </thead>
+  <tbody>
+    <tr><td><strong>Primary Dataset</strong></td><td>NAB (Numenta Anomaly Benchmark) and/or SMD (Server Machine Dataset)</td></tr>
+    <tr><td><strong>Source</strong></td><td><a href="https://www.kaggle.com/search?q=NAB/SMD" target="_blank">Kaggle Search: NAB/SMD</a></td></tr>
+    <tr><td><strong>Nature</strong></td><td>Multivariate time-series sensor readings with labeled anomaly windows</td></tr>
+    <tr><td><strong>Important Assumption</strong></td><td>The exact schema (number of sensors/features, row count, sampling rate, anomaly label format, and class distribution) must be documented from the actual downloaded dataset. Do not fabricate schema details.</td></tr>
+  </tbody>
+</table>
+
+<hr>
+
+<!-- ═══════════════ 6 ═══════════════ -->
+<h1 id="s7">7. Deliverables (Mandatory)</h1>
+<p>Every item below is a <strong>required output</strong> of the project:</p>
+<table>
+  <thead>
+    <tr><th>ID</th><th>Deliverable</th><th>Description</th></tr>
+  </thead>
+  <tbody>
+    <tr><td><strong>D-001</strong></td><td>Trained Anomaly Detector</td><td>A versioned PyTorch LSTM autoencoder model artifact, with documented training configuration, anomaly threshold, and reproducible pipeline.</td></tr>
+    <tr><td><strong>D-002</strong></td><td>Real-Time Monitoring Dashboard</td><td>A polished React frontend with Plotly charts showing live/near-live sensor data, reconstruction error, and flagged anomalies.</td></tr>
+    <tr><td><strong>D-003</strong></td><td>F1 Evaluation Report</td><td>A quantitative report containing F1-score, precision, recall, and standard NAB evaluation scores on the test set.</td></tr>
+    <tr><td><strong>D-004</strong></td><td>Full-Stack Application</td><td>A working React frontend + FastAPI backend wrapping the above, deployable and demonstrable.</td></tr>
+    <tr><td><strong>D-005</strong></td><td>README</td><td>Clear setup instructions, architecture diagram, and reproduction steps.</td></tr>
+    <tr><td><strong>D-006</strong></td><td>Unit &amp; Integration Tests</td><td>Tests covering API endpoints and the core ML pipeline.</td></tr>
+    <tr><td><strong>D-007</strong></td><td>Basic Auth / Session Handling</td><td>Authentication on the web app so only authorized users access dashboards.</td></tr>
+  </tbody>
+</table>
+
+<hr>
+
+<!-- ═══════════════ 7 ═══════════════ -->
+<h1 id="s8">8. Features (Prioritized)</h1>
+
+<h2>7.1 Must-Have Features</h2>
+<table>
+  <thead>
+    <tr><th>ID</th><th>Feature</th><th>Description</th><th>Acceptance Criteria</th></tr>
+  </thead>
+  <tbody>
+    <tr><td><strong>FR-001</strong></td><td>Sensor Data Ingestion &amp; Preprocessing</td><td>Ingest NAB/SMD dataset; normalize, window, and prepare multi-sensor time-series for LSTM input.</td><td>Dataset source/version documented; windowing parameters configurable; preprocessing is leakage-safe (fit on train only).</td></tr>
+    <tr><td><strong>FR-002</strong></td><td>LSTM Autoencoder Training Pipeline</td><td>Train a PyTorch LSTM encoder-decoder on normal data; compute reconstruction error; select anomaly threshold on validation set.</td><td>Versioned model artifact produced; training config (epochs, LR, hidden size, window size) logged; threshold selection documented.</td></tr>
+    <tr><td><strong>FR-003</strong></td><td>Anomaly Detection Inference</td><td>Given a time-series window, compute reconstruction error and flag as anomaly if error exceeds threshold.</td><td>Returns anomaly flag (boolean), reconstruction error (float), sensor-level error breakdown, model version, and timestamp.</td></tr>
+    <tr><td><strong>FR-004</strong></td><td>Real-Time Monitoring Dashboard</td><td>React + Plotly dashboard: (a) live sensor time-series, (b) reconstruction error over time, (c) anomaly markers/alerts, (d) sensor health summary.</td><td>Dashboard loads in &lt; 3s; charts update at configurable interval; anomalies highlighted with color + icon.</td></tr>
+    <tr><td><strong>FR-005</strong></td><td>F1 / Evaluation Report Page</td><td>Display F1-score, precision, recall, confusion matrix, and NAB score on a dedicated page or downloadable report.</td><td>Metrics computed on held-out test set; NAB evaluation protocol followed; report is reproducible.</td></tr>
+    <tr><td><strong>FR-006</strong></td><td>Model Performance &amp; Metadata</td><td>API endpoint and UI page showing model version, training date, hyperparameters, dataset version, threshold, and evaluation metrics.</td><td>Matches the actual trained artifact; updates when model is retrained.</td></tr>
+    <tr><td><strong>FR-007</strong></td><td>Basic Authentication &amp; Session Handling</td><td>Login screen with username/password; protected routes; session or JWT-based token management.</td><td>Unauthenticated requests return 401; session expires after configurable timeout.</td></tr>
+    <tr><td><strong>FR-008</strong></td><td>Health Check Endpoint</td><td><code>GET /health</code> returns service and model readiness status.</td><td>Returns 200 when model loaded; returns 503 when model unavailable.</td></tr>
+  </tbody>
+</table>
+
+<h2>7.2 Should-Have Features</h2>
+<table>
+  <thead>
+    <tr><th>ID</th><th>Feature</th><th>Description</th><th>Acceptance Criteria</th></tr>
+  </thead>
+  <tbody>
+    <tr><td><strong>FR-009</strong></td><td>Root Cause Analysis</td><td>For each detected anomaly, show which sensors contributed most to high reconstruction error.</td><td>Per-sensor error contribution displayed; top-N contributing sensors highlighted.</td></tr>
+    <tr><td><strong>FR-010</strong></td><td>Model Card</td><td>Document intended use, dataset, metrics, limitations, and ethical considerations.</td><td>Follows standard model card format; accessible via API or UI.</td></tr>
+    <tr><td><strong>FR-011</strong></td><td>Experiment Tracking</td><td>Log run ID, dataset version, hyperparameters, training metrics, and artifact version.</td><td>At least 3 tracked experiments with different configs; comparison possible.</td></tr>
+  </tbody>
+</table>
+
+<h2>7.3 Could-Have Features</h2>
+<table>
+  <thead>
+    <tr><th>ID</th><th>Feature</th><th>Description</th><th>Acceptance Criteria</th></tr>
+  </thead>
+  <tbody>
+    <tr><td><strong>FR-012</strong></td><td>Batch Inference</td><td>Accept a CSV/JSON file of time-series data and return anomaly results for the entire batch.</td><td>Upload → process → downloadable results; handles files up to 50 MB.</td></tr>
+  </tbody>
+</table>
+
+<hr>
+
+<!-- ═══════════════ 8 ═══════════════ -->
+<h1 id="s9">9. User Stories</h1>
+
+<h2>8.1 Operations &amp; Monitoring</h2>
+
+<h3>US-001</h3>
+<p>As a <strong>plant operations manager</strong>, I want to see a <strong>real-time dashboard of all sensor streams</strong> with anomaly alerts so I can <strong>immediately identify equipment issues before they cause downtime</strong>.</p>
+<blockquote><strong>Acceptance:</strong> Dashboard shows at least 5 sensor channels; anomalies highlighted within 5 seconds of detection; filterable by sensor/machine.</blockquote>
+
+<h3>US-002</h3>
+<p>As a <strong>maintenance technician</strong>, I want to see <strong>which specific sensors contributed to an anomaly</strong> so I can <strong>inspect the right component</strong> instead of checking every sensor manually.</p>
+<blockquote><strong>Acceptance:</strong> Anomaly detail view shows per-sensor reconstruction error breakdown; top contributing sensors are ranked.</blockquote>
+
+<h3>US-003</h3>
+<p>As an <strong>operations manager</strong>, I want to receive a <strong>visual alert (color + icon) on the dashboard</strong> when an anomaly is detected, so I can <strong>take action even in a noisy control-room environment</strong>.</p>
+<blockquote><strong>Acceptance:</strong> Alert is visible without scrolling; uses both color and icon (accessibility); state changes when acknowledged or anomaly window passes.</blockquote>
+
+<h2>8.2 Model Evaluation &amp; Data Science</h2>
+
+<h3>US-004</h3>
+<p>As a <strong>data scientist</strong>, I want to see <strong>F1-score, precision, recall, and NAB score</strong> on the test set so I can <strong>quantitatively assess whether the LSTM autoencoder meets production standards</strong>.</p>
+<blockquote><strong>Acceptance:</strong> Evaluation page shows all four metrics; confusion matrix displayed; NAB evaluation protocol documented.</blockquote>
+
+<h3>US-005</h3>
+<p>As a <strong>data scientist</strong>, I want a <strong>reproducible training configuration</strong> (seed, hyperparameters, dataset version, split rationale) so I can <strong>rerun experiments and get the same results</strong>.</p>
+<blockquote><strong>Acceptance:</strong> Re-running training with the same config produces identical metrics (within floating-point tolerance).</blockquote>
+
+<h3>US-006</h3>
+<p>As a <strong>data scientist</strong>, I want to <strong>compare multiple model runs</strong> (different architectures, hyperparameters) so I can <strong>select the best-performing anomaly detector</strong>.</p>
+<blockquote><strong>Acceptance:</strong> At least 3 experiment runs logged; comparison table of metrics viewable.</blockquote>
+
+<h2>8.3 Security &amp; Administration</h2>
+
+<h3>US-007</h3>
+<p>As a <strong>system administrator</strong>, I want <strong>basic authentication on the dashboard</strong> so that <strong>only authorized plant personnel can view sensitive operational data</strong>.</p>
+<blockquote><strong>Acceptance:</strong> Login page with username/password; unauthenticated requests redirected to login; session expires after 30 minutes of inactivity.</blockquote>
+
+<h3>US-008</h3>
+<p>As a <strong>new team member</strong>, I want a <strong>clear README with setup instructions and architecture diagram</strong> so I can <strong>run the entire application locally within 30 minutes</strong>.</p>
+<blockquote><strong>Acceptance:</strong> README contains: prerequisites, install steps, environment variables, model setup, start commands for frontend and backend, and architecture diagram.</blockquote>
+
+<hr>
+
+<!-- ═══════════════ 9 ═══════════════ -->
+<h1 id="s10">10. Evaluation &amp; Success Metrics</h1>
+<table>
+  <thead>
+    <tr><th>Metric</th><th>Target</th><th>Method</th></tr>
+  </thead>
+  <tbody>
+    <tr><td><strong>F1-Score</strong></td><td>≥ 0.80 on test set (document actual)</td><td>Standard sklearn F1 at chosen threshold</td></tr>
+    <tr><td><strong>Precision</strong></td><td>Document actual; discuss trade-offs</td><td>TP / (TP + FP)</td></tr>
+    <tr><td><strong>Recall</strong></td><td>Document actual; discuss trade-offs</td><td>TP / (TP + FN)</td></tr>
+    <tr><td><strong>NAB Score</strong></td><td>Compute and document using standard NAB protocol</td><td>NAB scoring function applied to detections</td></tr>
+    <tr><td><strong>Anomaly Threshold</strong></td><td>Selected on validation set, not test set</td><td>Reconstruction-error percentile or statistical method</td></tr>
+    <tr><td><strong>Dashboard Latency</strong></td><td>Chart update &lt; 3 seconds</td><td>Manual + automated timing</td></tr>
+    <tr><td><strong>API Inference Latency</strong></td><td>p95 &lt; 500 ms for single-window inference</td><td>Load test or manual measurement</td></tr>
+  </tbody>
+</table>
+
+<div class="callout">
+  <strong>⚠ Important:</strong> The anomaly threshold must be selected on the <strong>training/validation</strong> partition.
+  The test set must remain untouched until final evaluation.
+</div>
+
+<hr>
+
+<!-- ═══════════════ 10 ═══════════════ -->
+<h1 id="s11">11. Non-Functional Requirements</h1>
+<table>
+  <thead>
+    <tr><th style="width:22%;">Category</th><th>Requirement</th></tr>
+  </thead>
+  <tbody>
+    <tr><td><strong>Latency</strong></td><td>Single-window inference: p95 &lt; 500 ms. Dashboard chart refresh: &lt; 3 seconds.</td></tr>
+    <tr><td><strong>Authentication</strong></td><td>Basic auth (username/password) with session/JWT tokens. Protected routes return 401.</td></tr>
+    <tr><td><strong>Security</strong></td><td>HTTPS in production; Pydantic input validation; no raw sensor data in logs; dependency scanning; CORS restrictions.</td></tr>
+    <tr><td><strong>Scalability</strong></td><td>Keep FastAPI stateless. No microservices or databases without demonstrated need.</td></tr>
+    <tr><td><strong>Reliability</strong></td><td>Load model at startup; expose <code>/health</code>; structured error responses; deterministic inference for fixed model + input.</td></tr>
+    <tr><td><strong>Accessibility</strong></td><td>Anomaly indicators use both color AND icon/text. Keyboard navigable. Semantic HTML.</td></tr>
+    <tr><td><strong>Data Volume</strong></td><td>Handle full NAB/SMD dataset without OOM. Document memory/GPU requirements.</td></tr>
+    <tr><td><strong>GPU</strong></td><td>LSTM training requires GPU (CUDA). Inference should work on CPU. Document requirements.</td></tr>
+  </tbody>
+</table>
+
+<hr>
+
+<!-- ═══════════════ 11 ═══════════════ -->
+<h1 id="s12">12. Scope Boundary</h1>
+
+<h2><span class="scope-in">In Scope</span></h2>
+<ul>
+  <li>LSTM autoencoder training and inference on NAB/SMD data</li>
+  <li>Full-stack React + FastAPI application with basic auth</li>
+  <li>Real-time monitoring dashboard with Plotly visualizations</li>
+  <li>F1, precision, recall, and NAB evaluation report</li>
+  <li>Root cause analysis (per-sensor contribution)</li>
+  <li>Unit and integration tests for API and ML pipeline</li>
+  <li>README with architecture diagram and reproduction steps</li>
+</ul>
+
+<h2><span class="scope-out">Out of Scope</span></h2>
+<ul>
+  <li>Live connection to physical IoT sensors or MQTT brokers (data is replayed from dataset)</li>
+  <li>Multi-tenant SaaS deployment</li>
+  <li>Mobile application</li>
+  <li>Advanced RBAC (role-based access control) beyond basic auth</li>
+  <li>Automated model retraining pipeline (CI/CD for ML ops)</li>
+  <li>Integration with external alerting systems (PagerDuty, Slack, etc.)</li>
+</ul>
+
+<hr>
+
+<!-- ═══════════════ 12 ═══════════════ -->
+<h1 id="s13">13. Product Principles</h1>
+<table>
+  <thead>
+    <tr><th style="width:5%;">#</th><th style="width:25%;">Principle</th><th>Description</th></tr>
+  </thead>
+  <tbody>
+    <tr><td>1</td><td><strong>Detect first, act second</strong></td><td>The system surfaces anomalies for human review; it does not autonomously shut down equipment.</td></tr>
+    <tr><td>2</td><td><strong>Explainable anomalies</strong></td><td>Every detection must show reconstruction error and sensor-level contribution; a bare "anomaly detected" flag is insufficient.</td></tr>
+    <tr><td>3</td><td><strong>Rigorous evaluation</strong></td><td>Model quality is strictly measured by F1-score, precision, recall, and NAB protocol; do not over-report or cherry-pick metrics.</td></tr>
+    <tr><td>4</td><td><strong>Threshold transparency</strong></td><td>The anomaly threshold, its selection method, and trade-offs (missed anomalies vs. false alarms) must be documented and visible.</td></tr>
+    <tr><td>5</td><td><strong>Version everything</strong></td><td>Model artifact, preprocessing pipeline, threshold, and evaluation metrics must be versioned and traceable.</td></tr>
+    <tr><td>6</td><td><strong>Secure by default</strong></td><td>Industrial sensor data is operationally sensitive; all dashboard access requires authentication.</td></tr>
+  </tbody>
+</table>
+
+<hr>
+
+<!-- ═══════════════ 13 ═══════════════ -->
+<h1 id="s14">14. Core Data / ML Lifecycle</h1>
+<pre>
+┌─────────────────┐    ┌──────────────────────────┐    ┌───────────┐
+│ Data Acquisition │───▶│ Preprocessing & Windowing │───▶│    EDA    │
+└─────────────────┘    └──────────────────────────┘    └─────┬─────┘
+                                                             │
+                    ┌────────────────────────────────────────┘
+                    ▼
+         ┌─────────────────────┐    ┌──────────────────────────────┐
+         │ Train / Val / Test  │───▶│ LSTM Autoencoder Training    │
+         │     Split           │    │ (PyTorch)                    │
+         └─────────────────────┘    └──────────────┬───────────────┘
+                                                   │
+                    ┌──────────────────────────────┘
+                    ▼
+         ┌──────────────────────┐    ┌─────────────────────────────┐
+         │ Threshold Selection  │───▶│ Test Evaluation             │
+         │ (on Validation Set)  │    │ (F1, Precision, Recall, NAB)│
+         └──────────────────────┘    └──────────────┬──────────────┘
+                                                    │
+                    ┌───────────────────────────────┘
+                    ▼
+         ┌──────────────────────┐    ┌────────────────┐    ┌──────────────┐
+         │ Model Artifact       │───▶│ FastAPI Serving │───▶│ React        │
+         │ Versioning           │    │                │    │ Dashboard    │
+         └──────────────────────┘    └────────────────┘    └──────────────┘
+</pre>
+
+<hr>
+
+<!-- ═══════════════ 14 ═══════════════ -->
+<h1 id="s15">15. Dependencies on Other Documents</h1>
+<table>
+  <thead>
+    <tr><th>Document</th><th>Dependency</th></tr>
+  </thead>
+  <tbody>
+    <tr><td><strong>BRD</strong> (<code>02_BRD.md</code>)</td><td>Business objectives, personas, and requirements this PRD translates into product features.</td></tr>
+    <tr><td><strong>TRD</strong> (<code>05_TRD.md</code>)</td><td>Technical requirements (TR-IDs) that map to FR-IDs in this PRD.</td></tr>
+    <tr><td><strong>UX Requirements</strong> (<code>04_UX_Requirements.md</code>)</td><td>Dashboard screens, states, and accessibility rules.</td></tr>
+    <tr><td><strong>HLD</strong> (<code>06_HLD.md</code>)</td><td>Architecture diagram showing React → FastAPI → LSTM model flow.</td></tr>
+    <tr><td><strong>API Specification</strong> (<code>08_API_Specification.md</code>)</td><td>Endpoint contracts consumed by FR-003, FR-006, FR-008.</td></tr>
+    <tr><td><strong>Testing Strategy</strong> (<code>12_Testing_Strategy.md</code>)</td><td>Test cases validating acceptance criteria in this PRD.</td></tr>
+    <tr><td><strong>Model Card</strong> (<code>21_Model_Card.md</code>)</td><td>Detailed model documentation referenced by FR-010.</td></tr>
+  </tbody>
+</table>
+
+<hr>
+
+<!-- ═══════════════ 15 ═══════════════ -->
+<h1 id="s16">16. Phased Delivery</h1>
+<table>
+  <thead>
+    <tr><th>Phase</th><th style="width:10%;">Weeks</th><th>What Gets Delivered</th></tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td><strong>Phase 1 — Foundation</strong></td>
+      <td style="text-align:center;">1 – 4</td>
+      <td>Study ICML 2016 paper; scaffold FastAPI + React shell; acquire &amp; explore NAB/SMD dataset; build baseline pipeline; EDA complete.</td>
+    </tr>
+    <tr>
+      <td><strong>Phase 2 — Core Model &amp; API</strong></td>
+      <td style="text-align:center;">5 – 8</td>
+      <td>Train &amp; tune LSTM autoencoder; expose via FastAPI endpoints; run F1 / precision / recall evaluation; build React frontend screens.</td>
+    </tr>
+    <tr>
+      <td><strong>Phase 3 — Integration &amp; Polish</strong></td>
+      <td style="text-align:center;">9 – 12</td>
+      <td>Complete frontend-backend integration; deliver trained detector + dashboard + F1 report; add auth &amp; root cause analysis; polish UI/UX; finalize evaluation, documentation, demo, and presentation.</td>
+    </tr>
+  </tbody>
+</table>
+
+<hr>
+
+<!-- ═══════════════ 16 ═══════════════ -->
+<h1 id="s17">17. Traceability Summary</h1>
+<table>
+  <thead>
+    <tr><th>Business Requirement</th><th>Feature</th><th>User Story</th><th>API Endpoint</th><th>Test Coverage</th></tr>
+  </thead>
+  <tbody>
+    <tr><td>Detect anomalies in real time</td><td>FR-003, FR-004</td><td>US-001, US-003</td><td>POST /api/v1/detect</td><td>TEST-001, TEST-005</td></tr>
+    <tr><td>Sensor-level root cause</td><td>FR-009, FR-013</td><td>US-002</td><td>POST /api/v1/detect</td><td>TEST-002</td></tr>
+    <tr><td>F1/NAB evaluation</td><td>FR-005</td><td>US-004</td><td>GET /api/v1/model</td><td>TEST-003</td></tr>
+    <tr><td>Reproducible experiments</td><td>FR-011, FR-013</td><td>US-005, US-006</td><td>GET /api/v1/model</td><td>TEST-007, TEST-008</td></tr>
+    <tr><td>Secure access</td><td>FR-007</td><td>US-007</td><td>All protected routes</td><td>TEST-004</td></tr>
+    <tr><td>Setup &amp; documentation</td><td>D-005, D-008</td><td>US-008</td><td>N/A</td><td>README review</td></tr>
+    <tr><td>Rollback capability</td><td>FR-015</td><td>US-005</td><td>GET /api/v1/model</td><td>TEST-010</td></tr>
+    <tr><td>Observability</td><td>FR-014</td><td>US-004</td><td>GET /api/v1/health</td><td>TEST-009</td></tr>
+  </tbody>
+</table>
+
+<hr>
+
+<!-- ═══════════════ 17 ═══════════════ -->
+<h1 id="s18">18. Distinction Criteria</h1>
+<p>To achieve a distinction-level grade, the project must satisfy all of the following (sourced from <code>26_Project_Quality_Score.md</code>):</p>
+<table>
+  <thead>
+    <tr><th>Criterion</th><th>What Is Required</th></tr>
+  </thead>
+  <tbody>
+    <tr><td><strong>Clear problem formulation</strong></td><td>Problem statement references real IoT/manufacturing pain points with quantified impact (downtime cost, scale).</td></tr>
+    <tr><td><strong>Leakage-free methodology</strong></td><td>Preprocessing fitted on training data only; threshold selected on validation set; test set untouched until final evaluation.</td></tr>
+    <tr><td><strong>Strong baseline comparison</strong></td><td>A simple statistical baseline detector is built and its metrics (F1, precision, recall) compared against the LSTM autoencoder. LSTM must demonstrably outperform the baseline.</td></tr>
+    <tr><td><strong>Rigorous LSTM evaluation</strong></td><td>F1-score, precision, recall, NAB score, confusion matrix, and reconstruction-error distribution all reported on the held-out test set.</td></tr>
+    <tr><td><strong>Threshold &amp; business trade-offs</strong></td><td>Anomaly threshold selection method documented; precision-recall trade-offs explained in plain language for operations users.</td></tr>
+    <tr><td><strong>Experiment reproducibility</strong></td><td>Fixed random seed, dataset version, split seed, and all hyperparameters logged per run; re-running produces same metrics.</td></tr>
+    <tr><td><strong>Clean model serving</strong></td><td>FastAPI stateless; model loaded once at startup; versioned artifact; <code>/health</code> endpoint; structured error responses.</td></tr>
+    <tr><td><strong>Tested API &amp; UI</strong></td><td>Unit tests for preprocessing and inference; integration tests for all API endpoints; UI tests for loading/error/success states.</td></tr>
+    <tr><td><strong>Responsible use limitations</strong></td><td>Model card and dashboard both explicitly state the system is decision-support only; anomaly flag must not autonomously trigger actions.</td></tr>
+    <tr><td><strong>Polished dashboard</strong></td><td>Plotly charts render sensor data, reconstruction error, and anomaly markers; accessibility (color + icon); loads in under 3 seconds.</td></tr>
+  </tbody>
+</table>
+
+<hr>
+
+<!-- ═══════════════ FOOTER ═══════════════ -->
+<div class="doc-footer">
+  <strong>End of Document</strong> — PRD v1.0 — Anomaly Detection in Time Series<br>
+  Advanced Data Science Track &nbsp;|&nbsp; September 2026
+</div>
+
+</div><!-- .page-container -->
+
+</body>
+</html>

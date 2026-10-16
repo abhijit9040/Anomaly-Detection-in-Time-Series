@@ -1,0 +1,9 @@
+{
+  "machine_id": "machine-1-1",
+  "method": "LSTM_Autoencoder",
+  "threshold": 0.8280734419822693,
+  "threshold_strategy": "Val Mean + 3.0*Std",
+  "precision": 0.19825767372218064,
+  "recall": 0.995557074504443,
+  "f1": 0.3306657585561042
+}

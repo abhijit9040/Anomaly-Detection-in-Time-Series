@@ -1,0 +1,8 @@
+{
+  "machine_id": "machine-1-1",
+  "method": "MovingAverage_ZScore",
+  "precision": 0.094599339841281,
+  "recall": 1.0,
+  "f1": 0.17284742717823687,
+  "best_threshold": 0.0
+}

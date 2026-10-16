@@ -1,0 +1,119 @@
+# ═══════════════════════════════════════════════
+# Python & Virtual Environments
+# ═══════════════════════════════════════════════
+__pycache__/
+**/__pycache__/
+*.py[cod]
+*$py.class
+*.so
+*.egg-info/
+*.egg
+dist/
+build/
+.eggs/
+*.whl
+
+# Virtual Environments (backend, training, root)
+.venv/
+**/.venv/
+venv/
+**/venv/
+env/
+**/env/
+ENV/
+
+# ═══════════════════════════════════════════════
+# Node.js & Frontend
+# ═══════════════════════════════════════════════
+node_modules/
+**/node_modules/
+dist/
+**/dist/
+frontend/dist/
+frontend/.cache/
+*.tsbuildinfo
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# ═══════════════════════════════════════════════
+# Environment & Secrets (Keep .env.example)
+# ═══════════════════════════════════════════════
+.env
+**/.env
+.env.local
+.env.*.local
+*.pem
+*.key
+
+# ═══════════════════════════════════════════════
+# Data & Datasets (do NOT commit large data files)
+# ═══════════════════════════════════════════════
+data/raw/
+data/processed/
+*.csv
+*.tsv
+*.parquet
+*.h5
+*.hdf5
+*.zip
+*.tar.gz
+
+# ═══════════════════════════════════════════════
+# Model Artifacts
+# ═══════════════════════════════════════════════
+# Ignore generic heavy checkpoints, allow versioned lightweight artifact
+*.onnx
+*.joblib
+!training/artifacts/lstm_autoencoder_machine-1-1.pt
+!training/artifacts/scaler_machine-1-1.pkl
+!training/artifacts/*.json
+!training/artifacts/.gitkeep
+
+# ═══════════════════════════════════════════════
+# Jupyter Notebooks (output checkpoints)
+# ═══════════════════════════════════════════════
+.ipynb_checkpoints/
+**/.ipynb_checkpoints/
+
+# ═══════════════════════════════════════════════
+# IDE & OS Files
+# ═══════════════════════════════════════════════
+.vscode/
+**/.vscode/
+.idea/
+**/.idea/
+*.swp
+*.swo
+*~
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# ═══════════════════════════════════════════════
+# Testing & Coverage
+# ═══════════════════════════════════════════════
+.pytest_cache/
+**/.pytest_cache/
+.coverage
+htmlcov/
+.mypy_cache/
+**/.mypy_cache/
+.ruff_cache/
+**/.ruff_cache/
+
+# ═══════════════════════════════════════════════
+# Logs
+# ═══════════════════════════════════════════════
+*.log
+logs/
+**/logs/
+
+# ═══════════════════════════════════════════════
+# Documentation files (Explicitly keep)
+# ═══════════════════════════════════════════════
+!PRD.md
+!PRD.html
+!PRD.docx
+!PRD_Final.docx
+!PRD_Final_v2.docx

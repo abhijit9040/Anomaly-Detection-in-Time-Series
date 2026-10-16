@@ -1,0 +1,61 @@
+# ══════════════════════════════════════════════════
+# Default Training Configuration
+# Anomaly Detection — LSTM Autoencoder
+# ══════════════════════════════════════════════════
+# This config file defines all hyperparameters and settings
+# for reproducible training runs. Every experiment must log
+# these values (FR-011, US-005).
+
+# ── Dataset ──────────────────────────────────────
+dataset:
+  name: "SMD"                    # Server Machine Dataset
+  source: "https://github.com/NetManAIOps/OmniAnomaly/tree/master/ServerMachineDataset"
+  machine_id: "machine-1-1"     # Which machine to train on
+  version: "1.0"
+
+# ── Preprocessing ────────────────────────────────
+preprocessing:
+  window_size: 30               # Number of timesteps per input window
+  step_size: 1                  # Sliding window stride
+  val_split: 0.2                # Fraction of training data for validation
+  scaler: "standard"            # Normalization method: "standard" or "minmax"
+
+# ── Model Architecture ──────────────────────────
+model:
+  type: "lstm_autoencoder"
+  hidden_size: 64               # LSTM hidden state dimension
+  latent_size: 32               # Bottleneck / latent dimension
+  num_layers: 2                 # Number of LSTM layers
+  dropout: 0.1                  # Dropout rate between LSTM layers
+
+# ── Training ─────────────────────────────────────
+training:
+  seed: 42                      # Random seed for reproducibility (US-005)
+  batch_size: 64
+  epochs: 50
+  learning_rate: 0.001
+  weight_decay: 0.0001
+  optimizer: "adam"
+  scheduler: "reduce_on_plateau"
+  scheduler_patience: 5
+  scheduler_factor: 0.5
+  early_stopping_patience: 10
+  gradient_clip_value: 1.0
+
+# ── Anomaly Threshold ───────────────────────────
+# Threshold is selected on the VALIDATION set, never the test set.
+# PRD §10: "The anomaly threshold must be selected on the
+# training/validation partition."
+threshold:
+  method: "percentile"          # "percentile" or "std_dev"
+  percentile: 95                # If method=percentile: use this percentile
+  std_multiplier: 3.0           # If method=std_dev: mean + N * std
+
+# ── Evaluation ───────────────────────────────────
+evaluation:
+  metrics:
+    - "f1_score"
+    - "precision"
+    - "recall"
+    - "nab_score"
+    - "confusion_matrix"

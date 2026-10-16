@@ -1,0 +1,377 @@
+
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+.app{font-family:var(--font-sans);font-size:14px;color:var(--text-primary);border:0.5px solid var(--border);border-radius:12px;overflow:hidden;background:var(--surface-1)}
+.topnav{background:var(--surface-2);border-bottom:0.5px solid var(--border);display:flex;align-items:center;gap:0;padding:0 16px}
+.nav-tab{padding:12px 14px;font-size:13px;color:var(--text-secondary);cursor:pointer;border-bottom:2px solid transparent;white-space:nowrap}
+.nav-tab.active{color:var(--text-primary);font-weight:500;border-bottom-color:var(--fill-accent)}
+.content{padding:20px}
+.screen{display:none}
+.screen.active{display:block}
+.card{background:var(--surface-2);border:0.5px solid var(--border);border-radius:12px;padding:16px}
+.card+.card{margin-top:12px}
+.card-title{font-size:13px;font-weight:500;margin-bottom:14px;color:var(--text-primary)}
+.grid2{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.grid3{display:grid;grid-template-columns:repeat(3,1fr);gap:10px}
+.fg{display:flex;flex-direction:column;gap:5px;margin-bottom:12px}
+.fg label{font-size:12px;font-weight:500;color:var(--text-secondary)}
+.fg input,.fg select{padding:8px 10px;border-radius:var(--radius);border:0.5px solid var(--border-strong);background:var(--surface-2);color:var(--text-primary);font-size:13px;font-family:var(--font-sans);width:100%}
+.fg input.err{border-color:var(--border-danger)}
+.err-msg{font-size:12px;color:var(--text-danger);margin-top:3px}
+.btn{display:inline-flex;align-items:center;gap:6px;padding:7px 16px;border-radius:var(--radius);border:0.5px solid var(--border-strong);background:transparent;color:var(--text-primary);font-size:13px;cursor:pointer;font-family:var(--font-sans)}
+.btn:hover{background:var(--fill-ghost-hover)}
+.btn-primary{background:var(--fill-accent);border-color:var(--fill-accent);color:var(--on-accent)}
+.btn-primary:hover{background:var(--fill-accent-hover)}
+.btn-ghost{border-color:transparent;color:var(--text-secondary)}
+.metric{background:var(--surface-1);border-radius:var(--radius);padding:12px;text-align:center}
+.metric-lbl{font-size:11px;color:var(--text-muted);margin-bottom:4px}
+.metric-val{font-size:22px;font-weight:500}
+.badge{display:inline-flex;align-items:center;gap:4px;padding:3px 10px;border-radius:10px;font-size:12px;font-weight:500}
+.badge-high{background:var(--bg-danger);color:var(--text-danger)}
+.badge-med{background:var(--bg-warning);color:var(--text-warning)}
+.badge-low{background:var(--bg-success);color:var(--text-success)}
+.disclaimer{font-size:12px;background:var(--bg-warning);border:0.5px solid var(--border-warning);border-radius:var(--radius);padding:10px 12px;color:var(--text-warning);line-height:1.6;margin-bottom:14px}
+.info-row{display:flex;justify-content:space-between;align-items:center;padding:6px 0;font-size:12px;border-bottom:0.5px solid var(--border)}
+.info-row:last-child{border:none}
+.info-k{color:var(--text-muted)}
+.spinner{width:28px;height:28px;border:2px solid var(--border);border-top-color:var(--fill-accent);border-radius:50%;animation:spin .7s linear infinite;margin:0 auto 10px}
+@keyframes spin{to{transform:rotate(360deg)}}
+.state-box{text-align:center;padding:32px;color:var(--text-secondary);font-size:13px}
+.state-icon{font-size:32px;color:var(--text-muted);margin-bottom:10px}
+.score-bar-wrap{background:var(--border);border-radius:3px;height:8px;width:100%;overflow:hidden;margin:6px 0 2px}
+.score-bar{height:100%;border-radius:3px;background:var(--fill-danger)}
+.score-bar-med{background:var(--fill-warning)}
+.score-bar-low{background:var(--fill-success)}
+.cf-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px;font-size:12px}
+.cf-cell{background:var(--surface-1);border-radius:var(--radius);padding:10px;text-align:center}
+.cf-lbl{font-size:11px;color:var(--text-muted);margin-bottom:4px}
+.cf-val{font-size:18px;font-weight:500}
+.roc-bar-row{display:flex;align-items:center;gap:8px;margin-bottom:8px;font-size:12px}
+.roc-bar{flex:1;height:6px;border-radius:3px;background:var(--border);overflow:hidden}
+.roc-fill{height:100%;border-radius:3px}
+.limitation-item{display:flex;gap:8px;align-items:flex-start;padding:8px 0;border-bottom:0.5px solid var(--border);font-size:12px;color:var(--text-secondary)}
+.limitation-item:last-child{border:none}
+.state-tabs{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:14px}
+.state-tab{padding:4px 10px;border-radius:20px;font-size:11px;cursor:pointer;border:0.5px solid var(--border);background:var(--surface-1);color:var(--text-secondary)}
+.state-tab.active{background:var(--fill-accent);border-color:var(--fill-accent);color:var(--on-accent)}
+</style>
+
+<h2 class="sr-only">Credit scoring app UX wireframes — interactive mockups for Overview, Applicant Scoring, Risk Result, Model Performance, Model Card, and Limitations screens</h2>
+
+<div class="app">
+  <div class="topnav" role="tablist">
+    <div class="nav-tab active" role="tab" onclick="show('overview')">Overview</div>
+    <div class="nav-tab" role="tab" onclick="show('scoring')">Applicant scoring</div>
+    <div class="nav-tab" role="tab" onclick="show('result')">Risk result</div>
+    <div class="nav-tab" role="tab" onclick="show('perf')">Model performance</div>
+    <div class="nav-tab" role="tab" onclick="show('modelcard')">Model card</div>
+    <div class="nav-tab" role="tab" onclick="show('limits')">Limitations</div>
+  </div>
+
+  <div class="content">
+
+    <!-- OVERVIEW -->
+    <div class="screen active" id="sc-overview">
+      <div style="margin-bottom:16px">
+        <div style="font-size:18px;font-weight:500;margin-bottom:4px">Credit risk scoring</div>
+        <div style="font-size:13px;color:var(--text-secondary)">AdaBoost model — Give Me Some Credit dataset</div>
+      </div>
+      <div class="grid3" style="margin-bottom:14px">
+        <div class="metric"><div class="metric-lbl">Model</div><div class="metric-val" style="font-size:15px;color:var(--text-accent)">AdaBoost</div></div>
+        <div class="metric"><div class="metric-lbl">ROC-AUC</div><div class="metric-val">0.87</div></div>
+        <div class="metric"><div class="metric-lbl">Version</div><div class="metric-val" style="font-size:15px">v1.2.0</div></div>
+      </div>
+      <div class="card">
+        <div class="card-title">Application flow</div>
+        <div style="display:flex;align-items:center;gap:0;flex-wrap:wrap">
+          <div style="display:flex;flex-direction:column;align-items:center;gap:4px;padding:10px 14px;background:var(--bg-accent);border-radius:var(--radius);cursor:pointer" onclick="show('scoring')">
+            <i class="ti ti-forms" style="font-size:20px;color:var(--text-accent)" aria-hidden="true"></i>
+            <div style="font-size:12px;font-weight:500;color:var(--text-accent)">Enter applicant data</div>
+          </div>
+          <i class="ti ti-chevron-right" style="font-size:16px;color:var(--text-muted);margin:0 6px" aria-hidden="true"></i>
+          <div style="display:flex;flex-direction:column;align-items:center;gap:4px;padding:10px 14px;background:var(--surface-1);border-radius:var(--radius)">
+            <i class="ti ti-cpu" style="font-size:20px;color:var(--text-secondary)" aria-hidden="true"></i>
+            <div style="font-size:12px;color:var(--text-secondary)">Model inference</div>
+          </div>
+          <i class="ti ti-chevron-right" style="font-size:16px;color:var(--text-muted);margin:0 6px" aria-hidden="true"></i>
+          <div style="display:flex;flex-direction:column;align-items:center;gap:4px;padding:10px 14px;background:var(--surface-1);border-radius:var(--radius);cursor:pointer" onclick="show('result')">
+            <i class="ti ti-chart-bar" style="font-size:20px;color:var(--text-secondary)" aria-hidden="true"></i>
+            <div style="font-size:12px;color:var(--text-secondary)">View risk result</div>
+          </div>
+          <i class="ti ti-chevron-right" style="font-size:16px;color:var(--text-muted);margin:0 6px" aria-hidden="true"></i>
+          <div style="display:flex;flex-direction:column;align-items:center;gap:4px;padding:10px 14px;background:var(--surface-1);border-radius:var(--radius)">
+            <i class="ti ti-user-check" style="font-size:20px;color:var(--text-secondary)" aria-hidden="true"></i>
+            <div style="font-size:12px;color:var(--text-secondary)">Underwriter decides</div>
+          </div>
+        </div>
+      </div>
+      <div class="card" style="margin-top:12px">
+        <div class="card-title">Decision-support notice</div>
+        <div class="disclaimer" style="margin-bottom:0"><i class="ti ti-info-circle" aria-hidden="true"></i> This tool provides <strong>decision support only</strong>. All credit decisions must be reviewed and authorised by a qualified underwriter. Model output does not constitute a credit determination.</div>
+      </div>
+    </div>
+
+    <!-- SCORING SCREEN -->
+    <div class="screen" id="sc-scoring">
+      <div style="margin-bottom:14px;display:flex;justify-content:space-between;align-items:center">
+        <div>
+          <div style="font-size:16px;font-weight:500;margin-bottom:3px">Applicant scoring</div>
+          <div style="font-size:12px;color:var(--text-secondary)">All fields required unless marked optional</div>
+        </div>
+        <div style="display:flex;gap:8px">
+          <div class="state-tabs">
+            <div class="state-tab active" onclick="setFormState('default',this)">Default</div>
+            <div class="state-tab" onclick="setFormState('error',this)">Validation error</div>
+            <div class="state-tab" onclick="setFormState('loading',this)">Loading</div>
+            <div class="state-tab" onclick="setFormState('apierr',this)">API error</div>
+          </div>
+        </div>
+      </div>
+
+      <div id="form-default">
+        <div class="card">
+          <div class="card-title"><i class="ti ti-user" aria-hidden="true" style="font-size:15px"></i> Financial profile</div>
+          <div class="grid2">
+            <div class="fg"><label for="rev-util">Revolving utilisation (%)</label><input id="rev-util" type="number" placeholder="e.g. 45" min="0" max="100"/></div>
+            <div class="fg"><label for="age">Age</label><input id="age" type="number" placeholder="e.g. 38" min="18" max="100"/></div>
+          </div>
+          <div class="grid2">
+            <div class="fg"><label for="past-due">Times 30–59 days past due</label><input id="past-due" type="number" placeholder="e.g. 0" min="0"/></div>
+            <div class="fg"><label for="dti">Debt-to-income ratio</label><input id="dti" type="number" placeholder="e.g. 12.5" min="0"/></div>
+          </div>
+          <div class="grid2">
+            <div class="fg"><label for="monthly-inc">Monthly income (₹)</label><input id="monthly-inc" type="number" placeholder="e.g. 95000" min="0"/></div>
+            <div class="fg"><label for="open-credit">Open credit lines</label><input id="open-credit" type="number" placeholder="e.g. 4" min="0"/></div>
+          </div>
+          <div class="grid2">
+            <div class="fg"><label for="re-loans">Real estate loans</label><input id="re-loans" type="number" placeholder="e.g. 1" min="0"/></div>
+            <div class="fg"><label for="pd-60">Times 60–89 days past due</label><input id="pd-60" type="number" placeholder="e.g. 0" min="0"/></div>
+          </div>
+          <div class="grid2">
+            <div class="fg"><label for="dependents">Number of dependents <span style="color:var(--text-muted)">(optional)</span></label><input id="dependents" type="number" placeholder="e.g. 2" min="0"/></div>
+            <div class="fg"><label for="pd-90">Times 90+ days past due</label><input id="pd-90" type="number" placeholder="e.g. 0" min="0"/></div>
+          </div>
+        </div>
+        <div style="display:flex;gap:8px;margin-top:12px;justify-content:flex-end">
+          <button class="btn btn-ghost" onclick="resetForm()"><i class="ti ti-refresh" aria-hidden="true"></i>Reset</button>
+          <button class="btn btn-primary" onclick="submitForm()"><i class="ti ti-send" aria-hidden="true"></i>Score applicant</button>
+        </div>
+      </div>
+
+      <div id="form-error" style="display:none">
+        <div class="card">
+          <div class="card-title">Financial profile</div>
+          <div class="grid2">
+            <div class="fg"><label>Revolving utilisation (%)</label><input type="number" value="" class="err"/><div class="err-msg"><i class="ti ti-alert-circle" aria-hidden="true"></i> Enter a value between 0 and 100</div></div>
+            <div class="fg"><label>Age</label><input type="number" value=""/><div class="err-msg"><i class="ti ti-alert-circle" aria-hidden="true"></i> Age is required</div></div>
+          </div>
+          <div class="grid2">
+            <div class="fg"><label>Debt-to-income ratio</label><input type="number" value="-5" class="err"/><div class="err-msg"><i class="ti ti-alert-circle" aria-hidden="true"></i> Must be 0 or greater</div></div>
+            <div class="fg"><label>Monthly income (₹)</label><input type="number" value="95000"/></div>
+          </div>
+        </div>
+        <div style="background:var(--bg-danger);border:0.5px solid var(--border-danger);border-radius:var(--radius);padding:10px 12px;font-size:12px;color:var(--text-danger);margin-top:10px"><i class="ti ti-alert-triangle" aria-hidden="true"></i> 3 fields need attention before scoring can continue.</div>
+        <div style="display:flex;gap:8px;margin-top:10px;justify-content:flex-end">
+          <button class="btn btn-ghost">Reset</button>
+          <button class="btn btn-primary" style="opacity:.5;cursor:not-allowed">Score applicant</button>
+        </div>
+      </div>
+
+      <div id="form-loading" style="display:none">
+        <div class="card">
+          <div class="state-box"><div class="spinner" role="status" aria-label="Scoring in progress"></div><div style="font-weight:500;margin-bottom:4px">Running inference…</div><div style="font-size:12px;color:var(--text-muted)">Preprocessing features and querying model</div></div>
+        </div>
+      </div>
+
+      <div id="form-apierr" style="display:none">
+        <div class="card">
+          <div class="state-box">
+            <div class="state-icon"><i class="ti ti-server-off" aria-hidden="true"></i></div>
+            <div style="font-weight:500;margin-bottom:6px">Scoring service unavailable</div>
+            <div style="font-size:12px;color:var(--text-muted);margin-bottom:14px">The model API could not be reached. Check your connection or try again.</div>
+            <button class="btn btn-primary"><i class="ti ti-refresh" aria-hidden="true"></i>Retry</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- RISK RESULT -->
+    <div class="screen" id="sc-result">
+      <div style="margin-bottom:14px">
+        <div style="font-size:16px;font-weight:500;margin-bottom:3px">Risk result</div>
+        <div style="font-size:12px;color:var(--text-secondary)">Scored 27 Aug 2026, 11:14 AM · Model v1.2.0</div>
+      </div>
+      <div class="disclaimer"><i class="ti ti-shield-exclamation" aria-hidden="true"></i> <strong>Decision support only.</strong> This score must not be used as the sole basis for a credit decision. A qualified underwriter must review and authorise all outcomes.</div>
+      <div class="grid2">
+        <div class="card" style="text-align:center">
+          <div class="card-title" style="text-align:left">Risk score</div>
+          <div style="font-size:44px;font-weight:500;color:var(--text-danger);line-height:1;margin-bottom:6px" aria-label="Risk score 0.74">0.74</div>
+          <div class="score-bar-wrap" role="progressbar" aria-valuenow="74" aria-valuemin="0" aria-valuemax="100"><div class="score-bar" style="width:74%"></div></div>
+          <div style="font-size:11px;color:var(--text-muted);margin-bottom:10px">0 = lowest risk · 1 = highest risk</div>
+          <span class="badge badge-high"><i class="ti ti-alert-triangle" aria-hidden="true"></i> High risk</span>
+          <div style="font-size:11px;color:var(--text-muted);margin-top:6px">Threshold &gt; 0.50 = high risk</div>
+        </div>
+        <div class="card">
+          <div class="card-title">Result details</div>
+          <div class="info-row"><div class="info-k">Risk tier</div><div><span class="badge badge-high">High</span></div></div>
+          <div class="info-row"><div class="info-k">Default probability</div><div style="font-weight:500;color:var(--text-danger)">74.2%</div></div>
+          <div class="info-row"><div class="info-k">Decision threshold</div><div style="font-weight:500">0.50</div></div>
+          <div class="info-row"><div class="info-k">Model version</div><div style="color:var(--text-muted)">AdaBoost v1.2.0</div></div>
+          <div class="info-row"><div class="info-k">Scored at</div><div style="color:var(--text-muted)">27 Aug 2026, 11:14 AM</div></div>
+          <div class="info-row"><div class="info-k">Features used</div><div style="color:var(--text-muted)">9 / 9</div></div>
+        </div>
+      </div>
+      <div class="card" style="margin-top:12px">
+        <div class="card-title">Top contributing features</div>
+        <div class="roc-bar-row"><span style="width:160px;color:var(--text-secondary)">Revolving utilisation</span><div class="roc-bar"><div class="roc-fill" style="width:88%;background:var(--fill-danger)"></div></div><span style="color:var(--text-danger);font-weight:500">+0.41</span></div>
+        <div class="roc-bar-row"><span style="width:160px;color:var(--text-secondary)">90+ days past due</span><div class="roc-bar"><div class="roc-fill" style="width:64%;background:var(--fill-danger)"></div></div><span style="color:var(--text-danger);font-weight:500">+0.30</span></div>
+        <div class="roc-bar-row"><span style="width:160px;color:var(--text-secondary)">Debt-to-income ratio</span><div class="roc-bar"><div class="roc-fill" style="width:48%;background:var(--fill-warning)"></div></div><span style="color:var(--text-warning);font-weight:500">+0.22</span></div>
+        <div class="roc-bar-row"><span style="width:160px;color:var(--text-secondary)">Monthly income</span><div class="roc-bar"><div class="roc-fill" style="width:36%;background:var(--fill-success)"></div></div><span style="color:var(--text-success);font-weight:500">−0.16</span></div>
+        <div class="roc-bar-row"><span style="width:160px;color:var(--text-secondary)">Age</span><div class="roc-bar"><div class="roc-fill" style="width:22%;background:var(--fill-success)"></div></div><span style="color:var(--text-success);font-weight:500">−0.10</span></div>
+      </div>
+      <div style="display:flex;gap:8px;margin-top:12px;justify-content:flex-end">
+        <button class="btn btn-ghost" onclick="show('scoring')"><i class="ti ti-arrow-left" aria-hidden="true"></i>Score another</button>
+        <button class="btn btn-primary"><i class="ti ti-download" aria-hidden="true"></i>Export result</button>
+      </div>
+    </div>
+
+    <!-- MODEL PERFORMANCE -->
+    <div class="screen" id="sc-perf">
+      <div style="margin-bottom:14px">
+        <div style="font-size:16px;font-weight:500;margin-bottom:3px">Model performance</div>
+        <div style="font-size:12px;color:var(--text-secondary)">Evaluated on held-out test set · Train/test split 80/20</div>
+      </div>
+      <div class="grid3" style="margin-bottom:12px">
+        <div class="metric"><div class="metric-lbl">ROC-AUC</div><div class="metric-val" style="color:var(--text-success)">0.87</div></div>
+        <div class="metric"><div class="metric-lbl">Precision</div><div class="metric-val">0.72</div></div>
+        <div class="metric"><div class="metric-lbl">Recall</div><div class="metric-val">0.68</div></div>
+      </div>
+      <div class="grid2">
+        <div class="card">
+          <div class="card-title">Confusion matrix</div>
+          <div class="cf-grid">
+            <div class="cf-cell"><div class="cf-lbl">True negative</div><div class="cf-val" style="color:var(--text-success)">12,840</div></div>
+            <div class="cf-cell"><div class="cf-lbl">False positive</div><div class="cf-val" style="color:var(--text-danger)">1,204</div></div>
+            <div class="cf-cell"><div class="cf-lbl">False negative</div><div class="cf-val" style="color:var(--text-warning)">698</div></div>
+            <div class="cf-cell"><div class="cf-lbl">True positive</div><div class="cf-val" style="color:var(--text-success)">1,458</div></div>
+          </div>
+          <div style="font-size:11px;color:var(--text-muted);margin-top:10px;padding-top:8px;border-top:0.5px solid var(--border)">Positive class = 90-day default · Threshold 0.50</div>
+        </div>
+        <div class="card">
+          <div class="card-title">Key metrics</div>
+          <div class="roc-bar-row"><span style="width:100px;color:var(--text-secondary)">ROC-AUC</span><div class="roc-bar"><div class="roc-fill" style="width:87%;background:var(--fill-success)"></div></div><span style="font-weight:500">0.87</span></div>
+          <div class="roc-bar-row"><span style="width:100px;color:var(--text-secondary)">Precision</span><div class="roc-bar"><div class="roc-fill" style="width:72%;background:var(--fill-accent)"></div></div><span style="font-weight:500">0.72</span></div>
+          <div class="roc-bar-row"><span style="width:100px;color:var(--text-secondary)">Recall</span><div class="roc-bar"><div class="roc-fill" style="width:68%;background:var(--fill-accent)"></div></div><span style="font-weight:500">0.68</span></div>
+          <div class="roc-bar-row"><span style="width:100px;color:var(--text-secondary)">F1-score</span><div class="roc-bar"><div class="roc-fill" style="width:70%;background:var(--fill-accent)"></div></div><span style="font-weight:500">0.70</span></div>
+          <div style="font-size:11px;color:var(--text-muted);margin-top:10px;padding-top:8px;border-top:0.5px solid var(--border)">
+            <strong>Threshold rationale:</strong> 0.50 selected to balance false-positive cost (unnecessary rejection) against false-negative cost (undetected default risk).
+          </div>
+        </div>
+      </div>
+      <div class="card" style="margin-top:12px">
+        <div class="card-title">Train / test split</div>
+        <div class="info-row"><div class="info-k">Dataset</div><div style="color:var(--text-muted)">Give Me Some Credit</div></div>
+        <div class="info-row"><div class="info-k">Total samples</div><div style="font-weight:500">150,000</div></div>
+        <div class="info-row"><div class="info-k">Training set</div><div style="font-weight:500">120,000 (80%)</div></div>
+        <div class="info-row"><div class="info-k">Test set</div><div style="font-weight:500">30,000 (20%)</div></div>
+        <div class="info-row"><div class="info-k">Class balance (positive)</div><div style="color:var(--text-warning)">6.7% default rate</div></div>
+      </div>
+    </div>
+
+    <!-- MODEL CARD -->
+    <div class="screen" id="sc-modelcard">
+      <div style="margin-bottom:14px">
+        <div style="font-size:16px;font-weight:500;margin-bottom:3px">Model card</div>
+        <div style="font-size:12px;color:var(--text-secondary)">AdaBoost credit risk classifier · v1.2.0</div>
+      </div>
+      <div class="grid2">
+        <div class="card">
+          <div class="card-title"><i class="ti ti-info-circle" aria-hidden="true" style="font-size:14px"></i> Model details</div>
+          <div class="info-row"><div class="info-k">Algorithm</div><div style="font-weight:500">AdaBoost (sklearn)</div></div>
+          <div class="info-row"><div class="info-k">Version</div><div style="font-weight:500">v1.2.0</div></div>
+          <div class="info-row"><div class="info-k">Task</div><div style="color:var(--text-muted)">Binary classification</div></div>
+          <div class="info-row"><div class="info-k">Output</div><div style="color:var(--text-muted)">Default probability (0–1)</div></div>
+          <div class="info-row"><div class="info-k">Threshold</div><div style="font-weight:500">0.50</div></div>
+          <div class="info-row"><div class="info-k">Training date</div><div style="color:var(--text-muted)">12 Aug 2026</div></div>
+        </div>
+        <div class="card">
+          <div class="card-title"><i class="ti ti-database" aria-hidden="true" style="font-size:14px"></i> Data details</div>
+          <div class="info-row"><div class="info-k">Dataset</div><div style="color:var(--text-muted)">Give Me Some Credit</div></div>
+          <div class="info-row"><div class="info-k">Source</div><div style="color:var(--text-accent)">Kaggle / synthetic</div></div>
+          <div class="info-row"><div class="info-k">Features</div><div style="font-weight:500">9 numeric inputs</div></div>
+          <div class="info-row"><div class="info-k">Target</div><div style="color:var(--text-muted)">90-day delinquency</div></div>
+          <div class="info-row"><div class="info-k">Geography</div><div style="color:var(--text-muted)">US consumer credit</div></div>
+          <div class="info-row"><div class="info-k">Time period</div><div style="color:var(--text-muted)">2005–2010</div></div>
+        </div>
+      </div>
+      <div class="card" style="margin-top:12px">
+        <div class="card-title"><i class="ti ti-list-check" aria-hidden="true" style="font-size:14px"></i> Input features</div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:0">
+          <div class="info-row" style="grid-column:1"><div class="info-k">RevolvingUtilizationOfUnsecuredLines</div><div style="color:var(--text-muted)">Float</div></div>
+          <div class="info-row" style="grid-column:2;padding-left:16px"><div class="info-k">age</div><div style="color:var(--text-muted)">Integer</div></div>
+          <div class="info-row"><div class="info-k">NumberOfTime30-59DaysPastDueNotWorse</div><div style="color:var(--text-muted)">Integer</div></div>
+          <div class="info-row" style="padding-left:16px"><div class="info-k">DebtRatio</div><div style="color:var(--text-muted)">Float</div></div>
+          <div class="info-row"><div class="info-k">MonthlyIncome</div><div style="color:var(--text-muted)">Float</div></div>
+          <div class="info-row" style="padding-left:16px"><div class="info-k">NumberOfOpenCreditLinesAndLoans</div><div style="color:var(--text-muted)">Integer</div></div>
+          <div class="info-row"><div class="info-k">NumberRealEstateLoansOrLines</div><div style="color:var(--text-muted)">Integer</div></div>
+          <div class="info-row" style="padding-left:16px"><div class="info-k">NumberOfTime60-89DaysPastDueNotWorse</div><div style="color:var(--text-muted)">Integer</div></div>
+          <div class="info-row"><div class="info-k">NumberOfDependents</div><div style="color:var(--text-muted)">Integer</div></div>
+        </div>
+      </div>
+      <div class="card" style="margin-top:12px">
+        <div class="card-title">Intended use</div>
+        <div style="font-size:12px;color:var(--text-secondary);line-height:1.7">This model is intended to assist qualified credit risk professionals as a <strong>decision-support tool only</strong>. It must not be used as the sole basis for credit approval, rejection, or pricing. Output should be reviewed in combination with human judgement, additional data sources, and regulatory compliance checks.</div>
+      </div>
+    </div>
+
+    <!-- LIMITATIONS -->
+    <div class="screen" id="sc-limits">
+      <div style="margin-bottom:14px">
+        <div style="font-size:16px;font-weight:500;margin-bottom:3px">Limitations</div>
+        <div style="font-size:12px;color:var(--text-secondary)">Known constraints and out-of-scope uses</div>
+      </div>
+      <div class="card" style="margin-bottom:12px">
+        <div class="card-title"><i class="ti ti-alert-triangle" aria-hidden="true" style="font-size:14px;color:var(--text-warning)"></i> Known limitations</div>
+        <div class="limitation-item"><i class="ti ti-point-filled" aria-hidden="true" style="color:var(--text-warning);font-size:10px;margin-top:3px"></i><div><strong style="display:block;margin-bottom:2px">US-centric training data</strong>Dataset reflects US consumer credit patterns from 2005–2010. Performance on other geographies or more recent lending cycles is not validated.</div></div>
+        <div class="limitation-item"><i class="ti ti-point-filled" aria-hidden="true" style="color:var(--text-warning);font-size:10px;margin-top:3px"></i><div><strong style="display:block;margin-bottom:2px">Class imbalance</strong>The dataset is 93.3% non-default. Model may underperform on minority-class edge cases despite SMOTE balancing during training.</div></div>
+        <div class="limitation-item"><i class="ti ti-point-filled" aria-hidden="true" style="color:var(--text-warning);font-size:10px;margin-top:3px"></i><div><strong style="display:block;margin-bottom:2px">Missing income handling</strong>~20% of training records had missing MonthlyIncome. Median imputation was applied — predictions for low-income or variable-income applicants carry higher uncertainty.</div></div>
+        <div class="limitation-item"><i class="ti ti-point-filled" aria-hidden="true" style="color:var(--text-warning);font-size:10px;margin-top:3px"></i><div><strong style="display:block;margin-bottom:2px">No behavioural or bureau data</strong>Model does not incorporate credit bureau scores, payment history trends, or behavioural signals. These factors are typically material to default prediction.</div></div>
+        <div class="limitation-item"><i class="ti ti-point-filled" aria-hidden="true" style="color:var(--text-warning);font-size:10px;margin-top:3px"></i><div><strong style="display:block;margin-bottom:2px">Static threshold</strong>The 0.50 decision threshold is fixed. It may need recalibration as the lending portfolio or economic conditions change.</div></div>
+      </div>
+      <div class="card">
+        <div class="card-title"><i class="ti ti-ban" aria-hidden="true" style="font-size:14px;color:var(--text-danger)"></i> Out of scope</div>
+        <div class="limitation-item"><i class="ti ti-x" aria-hidden="true" style="color:var(--text-danger);font-size:14px;margin-top:1px"></i><div>Automated credit decisions without human review</div></div>
+        <div class="limitation-item"><i class="ti ti-x" aria-hidden="true" style="color:var(--text-danger);font-size:14px;margin-top:1px"></i><div>Use in regulated ECOA / fair lending contexts without bias audit</div></div>
+        <div class="limitation-item"><i class="ti ti-x" aria-hidden="true" style="color:var(--text-danger);font-size:14px;margin-top:1px"></i><div>Real-time production scoring at scale without monitoring</div></div>
+        <div class="limitation-item"><i class="ti ti-x" aria-hidden="true" style="color:var(--text-danger);font-size:14px;margin-top:1px"></i><div>Business, SME, or non-consumer lending applications</div></div>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<script>
+function show(id){
+  document.querySelectorAll('.screen').forEach(s=>s.classList.remove('active'));
+  document.querySelectorAll('.nav-tab').forEach(t=>t.classList.remove('active'));
+  document.getElementById('sc-'+id).classList.add('active');
+  const map={overview:0,scoring:1,result:2,perf:3,modelcard:4,limits:5};
+  const tabs=document.querySelectorAll('.nav-tab');
+  if(map[id]!==undefined)tabs[map[id]].classList.add('active');
+}
+function setFormState(state,el){
+  document.querySelectorAll('.state-tab').forEach(t=>t.classList.remove('active'));
+  el.classList.add('active');
+  ['form-default','form-error','form-loading','form-apierr'].forEach(id=>{
+    document.getElementById(id).style.display='none';
+  });
+  const map={default:'form-default',error:'form-error',loading:'form-loading',apierr:'form-apierr'};
+  if(map[state])document.getElementById(map[state]).style.display='block';
+}
+function submitForm(){
+  show('result');
+}
+function resetForm(){
+  document.querySelectorAll('#form-default input').forEach(i=>i.value='');
+}
+</script>
