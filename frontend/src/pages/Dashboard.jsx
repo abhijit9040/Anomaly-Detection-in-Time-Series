@@ -6,7 +6,7 @@
 
 import { useState, useEffect, useRef, useCallback } from 'react';
 import Plot from 'react-plotly.js';
-import { checkHealth, getStreamData, detectBatch } from '../services/api';
+import { checkHealth, getStreamData, detectBatch, jumpToAnomaly, injectAnomaly, resetStream } from '../services/api';
 
 const MAX_POINTS = 200;
 
@@ -26,6 +26,9 @@ export default function Dashboard() {
   const [streaming, setStreaming] = useState(false);
   const [recentAlerts, setRecentAlerts] = useState([]);
   const [topRootCauses, setTopRootCauses] = useState([]);
+  const [currentTimestep, setCurrentTimestep] = useState(null);
+  const [streamNotice, setStreamNotice] = useState(null);
+  const [actionLoading, setActionLoading] = useState(false);
 
   // Batch inference state (FR-012)
   const [batchResults, setBatchResults] = useState(null);
@@ -60,6 +63,10 @@ export default function Dashboard() {
       setSensor0(prev => [...prev.slice(-MAX_POINTS), d.sensor_values[0]]);
       setSensor1(prev => [...prev.slice(-MAX_POINTS), d.sensor_values[1]]);
       setSensor2(prev => [...prev.slice(-MAX_POINTS), d.sensor_values[2]]);
+
+      if (d.timestep !== undefined && d.timestep !== null) {
+        setCurrentTimestep(d.timestep);
+      }
 
       let top3 = [];
       if (d.sensor_errors && d.sensor_errors.length > 0) {
@@ -143,6 +150,50 @@ export default function Dashboard() {
     }
   };
 
+  const handleJumpToAnomaly = async () => {
+    setActionLoading(true);
+    try {
+      const res = await jumpToAnomaly();
+      setStreamNotice(`⚡ Jumped to timestep ${res.data.current_index} — Real SMD anomaly incoming in ~7 seconds!`);
+      setTimeout(() => setStreamNotice(null), 6000);
+      if (!streaming && health?.model_loaded) startStream();
+    } catch (err) {
+      alert('Failed to jump to anomaly: ' + (err.response?.data?.message || err.message));
+    } finally {
+      setActionLoading(false);
+    }
+  };
+
+  const handleInjectAnomaly = async () => {
+    setActionLoading(true);
+    try {
+      await injectAnomaly(15);
+      setStreamNotice('🧪 Injected sensor spike across channels 00, 01, 02 — Anomaly incoming!');
+      setTimeout(() => setStreamNotice(null), 6000);
+      if (!streaming && health?.model_loaded) startStream();
+    } catch (err) {
+      alert('Failed to inject anomaly: ' + (err.response?.data?.message || err.message));
+    } finally {
+      setActionLoading(false);
+    }
+  };
+
+  const handleResetStream = async () => {
+    setActionLoading(true);
+    try {
+      await resetStream();
+      setRecentAlerts([]);
+      setAnomalyCount(0);
+      setStreamNotice('🔄 Stream reset to normal baseline (Timestep 0).');
+      setTimeout(() => setStreamNotice(null), 4000);
+      if (!streaming && health?.model_loaded) startStream();
+    } catch (err) {
+      alert('Failed to reset stream: ' + (err.response?.data?.message || err.message));
+    } finally {
+      setActionLoading(false);
+    }
+  };
+
   const modelLoaded = health?.model_loaded;
 
   return (
@@ -152,19 +203,57 @@ export default function Dashboard() {
           <h1 className="page-title">Real-Time Dashboard</h1>
           <p className="page-subtitle">Sensor anomaly monitoring — Industrial IoT</p>
         </div>
-        <div className="header-actions" style={{ display: 'flex', gap: '10px', alignItems: 'center' }}>
+        <div className="header-actions" style={{ display: 'flex', gap: '8px', alignItems: 'center', flexWrap: 'wrap' }}>
           {modelLoaded && (
-            <button
-              onClick={streaming ? stopStream : startStream}
-              style={{
-                padding: '8px 20px', borderRadius: '8px', border: 'none', cursor: 'pointer',
-                background: streaming ? 'rgba(239,68,68,0.15)' : 'rgba(16,185,129,0.15)',
-                color: streaming ? '#ef4444' : '#10b981',
-                fontWeight: 600, fontSize: '13px',
-              }}
-            >
-              {streaming ? '⏸ Pause Stream' : '▶ Start Stream'}
-            </button>
+            <>
+              <button
+                onClick={handleJumpToAnomaly}
+                disabled={actionLoading}
+                title="Jump replay to 15 steps before the real anomaly event in SMD test dataset"
+                style={{
+                  padding: '7px 14px', borderRadius: '8px', border: '1px solid rgba(99,102,241,0.4)',
+                  background: 'rgba(99,102,241,0.15)', color: '#818cf8', cursor: 'pointer',
+                  fontWeight: 600, fontSize: '12px', display: 'flex', alignItems: 'center', gap: '5px'
+                }}
+              >
+                ⚡ Jump to Anomaly
+              </button>
+              <button
+                onClick={handleInjectAnomaly}
+                disabled={actionLoading}
+                title="Simulate an instant anomaly spike on sensor channels"
+                style={{
+                  padding: '7px 14px', borderRadius: '8px', border: '1px solid rgba(239,68,68,0.3)',
+                  background: 'rgba(239,68,68,0.12)', color: '#ef4444', cursor: 'pointer',
+                  fontWeight: 600, fontSize: '12px',
+                }}
+              >
+                🧪 Inject Spike
+              </button>
+              <button
+                onClick={handleResetStream}
+                disabled={actionLoading}
+                title="Reset stream replay to timestep 0"
+                style={{
+                  padding: '7px 12px', borderRadius: '8px', border: '1px solid rgba(255,255,255,0.1)',
+                  background: 'transparent', color: 'var(--text-muted)', cursor: 'pointer',
+                  fontWeight: 500, fontSize: '12px',
+                }}
+              >
+                🔄 Reset (0)
+              </button>
+              <button
+                onClick={streaming ? stopStream : startStream}
+                style={{
+                  padding: '7px 16px', borderRadius: '8px', border: 'none', cursor: 'pointer',
+                  background: streaming ? 'rgba(239,68,68,0.15)' : 'rgba(16,185,129,0.15)',
+                  color: streaming ? '#ef4444' : '#10b981',
+                  fontWeight: 600, fontSize: '12px',
+                }}
+              >
+                {streaming ? '⏸ Pause' : '▶ Start'}
+              </button>
+            </>
           )}
           <div className={`status-badge ${health ? 'status-badge--healthy' : 'status-badge--danger'}`}>
             <span className={`status-dot ${health ? 'status-dot--healthy' : 'status-dot--danger'}`}></span>
@@ -181,6 +270,30 @@ export default function Dashboard() {
             This system does not autonomously trigger equipment shutdown or maintenance orders.
           </span>
         </div>
+
+        {streamNotice && (
+          <div style={{
+            background: 'linear-gradient(90deg, rgba(99,102,241,0.18), rgba(239,68,68,0.15))',
+            border: '1px solid rgba(99,102,241,0.35)',
+            color: '#e2e8f0',
+            padding: '10px 18px',
+            borderRadius: '10px',
+            marginBottom: '16px',
+            fontSize: '13px',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'space-between',
+            boxShadow: '0 2px 10px rgba(0,0,0,0.2)'
+          }}>
+            <span>{streamNotice}</span>
+            <button
+              onClick={() => setStreamNotice(null)}
+              style={{ background: 'transparent', border: 'none', color: 'var(--text-muted)', cursor: 'pointer', fontSize: '16px' }}
+            >
+              ✕
+            </button>
+          </div>
+        )}
 
         {/* ── Metric Cards ── */}
         <div className="metrics-grid">
@@ -214,7 +327,7 @@ export default function Dashboard() {
               {lastError !== null ? lastError.toFixed(4) : '0.0412'}
             </div>
             <div className="metric-change" style={{ color: 'var(--text-muted)' }}>
-              Threshold: {threshold.current.toFixed(4)}
+              {currentTimestep !== null ? `Timestep #${currentTimestep} · ` : ''}Threshold: {threshold.current.toFixed(4)}
             </div>
           </div>
         </div>
@@ -389,20 +502,103 @@ export default function Dashboard() {
               <div className="card-title">Recent Anomaly Alerts</div>
               <div className="card-subtitle">Flagged windows — for human review only</div>
             </div>
-            {recentAlerts.length > 0 && (
+            <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
               <button
-                onClick={() => setRecentAlerts([])}
-                style={{ background: 'transparent', border: '1px solid rgba(255,255,255,0.1)', color: 'var(--text-muted)', padding: '4px 10px', borderRadius: '6px', fontSize: '12px', cursor: 'pointer' }}
+                onClick={handleJumpToAnomaly}
+                disabled={actionLoading}
+                style={{
+                  background: 'rgba(99,102,241,0.15)',
+                  color: '#818cf8',
+                  border: '1px solid rgba(99,102,241,0.3)',
+                  padding: '4px 10px',
+                  borderRadius: '6px',
+                  fontSize: '12px',
+                  cursor: 'pointer',
+                  fontWeight: 600,
+                }}
               >
-                Clear
+                ⚡ Jump to Anomaly Event
               </button>
-            )}
+              <button
+                onClick={handleInjectAnomaly}
+                disabled={actionLoading}
+                style={{
+                  background: 'rgba(239,68,68,0.12)',
+                  color: '#ef4444',
+                  border: '1px solid rgba(239,68,68,0.25)',
+                  padding: '4px 10px',
+                  borderRadius: '6px',
+                  fontSize: '12px',
+                  cursor: 'pointer',
+                  fontWeight: 600,
+                }}
+              >
+                🧪 Inject Spike
+              </button>
+              {recentAlerts.length > 0 && (
+                <button
+                  onClick={() => setRecentAlerts([])}
+                  style={{
+                    background: 'transparent',
+                    border: '1px solid rgba(255,255,255,0.1)',
+                    color: 'var(--text-muted)',
+                    padding: '4px 10px',
+                    borderRadius: '6px',
+                    fontSize: '12px',
+                    cursor: 'pointer',
+                  }}
+                >
+                  Clear
+                </button>
+              )}
+            </div>
           </div>
           {recentAlerts.length === 0 ? (
-            <div className="placeholder-state" style={{ minHeight: '120px' }}>
+            <div className="placeholder-state" style={{ minHeight: '160px', padding: '24px' }}>
               <div className="placeholder-icon">🔔</div>
-              <div className="placeholder-title">{streaming ? 'Monitoring Active — Sensor Behavior Normal' : 'Stream Paused'}</div>
-              <div className="placeholder-text">Alerts will appear here when the model detects anomalous sensor patterns.</div>
+              <div className="placeholder-title">
+                {streaming ? 'Monitoring Active — Sensor Behavior Normal' : 'Stream Paused'}
+              </div>
+              <div className="placeholder-text" style={{ maxWidth: '540px', margin: '0 auto 16px' }}>
+                Currently streaming normal baseline data {currentTimestep !== null ? `(Timestep #${currentTimestep})` : ''}.
+                In the real Server Machine Dataset, machine failure precursors start at Timestep #15,849.
+                To demonstrate live anomaly alerts and Root Cause Analysis immediately:
+              </div>
+              <div style={{ display: 'flex', gap: '10px', justifyContent: 'center', flexWrap: 'wrap' }}>
+                <button
+                  onClick={handleJumpToAnomaly}
+                  disabled={actionLoading}
+                  style={{
+                    background: 'linear-gradient(135deg, #6366f1, #4f46e5)',
+                    color: '#fff',
+                    border: 'none',
+                    padding: '8px 18px',
+                    borderRadius: '8px',
+                    fontSize: '13px',
+                    fontWeight: 600,
+                    cursor: 'pointer',
+                    boxShadow: '0 2px 10px rgba(99,102,241,0.3)',
+                  }}
+                >
+                  ⚡ Jump to Anomaly Window (Timestep 15,834)
+                </button>
+                <button
+                  onClick={handleInjectAnomaly}
+                  disabled={actionLoading}
+                  style={{
+                    background: 'rgba(239,68,68,0.15)',
+                    color: '#ef4444',
+                    border: '1px solid rgba(239,68,68,0.3)',
+                    padding: '8px 18px',
+                    borderRadius: '8px',
+                    fontSize: '13px',
+                    fontWeight: 600,
+                    cursor: 'pointer',
+                  }}
+                >
+                  🧪 Inject Sensor Spike
+                </button>
+              </div>
             </div>
           ) : (
             <div style={{ padding: '0 20px 16px', overflowX: 'auto' }}>

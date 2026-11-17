@@ -105,6 +105,14 @@ class StreamDataPoint(BaseModel):
     is_anomaly: bool | None = None
     reconstruction_error: float | None = None
     sensor_errors: list[SensorErrorBreakdown] | None = None
+    timestep: int | None = None
+    ground_truth_label: int | None = None
+
+
+class StreamSeekRequest(BaseModel):
+    """Request to seek to a specific timestep in the replay stream."""
+
+    index: int = Field(default=15835, description="Timestep index to seek to")
 
 
 # ═══════════════════════════════════════════════

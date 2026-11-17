@@ -48,3 +48,21 @@ async def test_evaluation_endpoint():
     assert "baseline" in data
     assert "improvement" in data
     assert data["lstm_autoencoder"]["f1"] > 0
+
+
+@pytest.mark.asyncio
+async def test_stream_controls():
+    """Test seeking and jumping to anomaly in stream."""
+    transport = ASGITransport(app=app)
+    async with AsyncClient(transport=transport, base_url="http://test") as client:
+        res_seek = await client.post("/api/v1/stream/seek", json={"index": 100})
+        assert res_seek.status_code == 200
+        assert res_seek.json()["current_index"] == 100
+
+        res_ano = await client.post("/api/v1/stream/anomaly")
+        assert res_ano.status_code == 200
+        assert res_ano.json()["current_index"] > 1000
+
+        res_inj = await client.post("/api/v1/stream/inject?duration=5")
+        assert res_inj.status_code == 200
+        assert res_inj.json()["injected"] is True

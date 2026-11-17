@@ -21,6 +21,7 @@ from app.models.schemas import (
     SensorErrorBreakdown,
     SensorWindow,
     StreamDataPoint,
+    StreamSeekRequest,
     TokenResponse,
     WindowDetectionResult,
 )
@@ -286,7 +287,9 @@ async def get_stream_data():
             import numpy as np
             end_idx = max(30, stream_service.current_index)
             start_idx = end_idx - 30
-            window = stream_service.test_data[start_idx:end_idx]
+            window = stream_service.test_data[start_idx:end_idx].copy()
+            if point.get("was_injected"):
+                window[-1] = point["sensor_values"]
             result = model_service.predict(window)
             reconstruction_error = round(result["reconstruction_error"], 6)
             is_anomaly = result["is_anomaly"]
@@ -307,7 +310,52 @@ async def get_stream_data():
         is_anomaly=is_anomaly,
         reconstruction_error=reconstruction_error,
         sensor_errors=sensor_errors,
+        timestep=point.get("timestep"),
+        ground_truth_label=point.get("ground_truth_label"),
     )
+
+
+# ═══════════════════════════════════════════════
+# Stream Controls — Seek, Jump to Anomaly, Inject
+# ═══════════════════════════════════════════════
+@router.post(
+    "/stream/seek",
+    summary="Seek replay stream to a specific timestep",
+)
+async def seek_stream(req: StreamSeekRequest):
+    new_idx = stream_service.seek(req.index)
+    return {"current_index": new_idx, "message": f"Stream moved to timestep {new_idx}"}
+
+
+@router.post(
+    "/stream/anomaly",
+    summary="Jump replay stream to just before the first real anomaly event",
+)
+async def jump_to_anomaly():
+    new_idx = stream_service.jump_to_anomaly(lead_in=15)
+    return {
+        "current_index": new_idx,
+        "first_anomaly_index": stream_service.first_anomaly_index,
+        "message": f"Stream jumped to timestep {new_idx} (15 steps before true anomaly event at {stream_service.first_anomaly_index})",
+    }
+
+
+@router.post(
+    "/stream/inject",
+    summary="Inject a synthetic anomaly spike into the live stream",
+)
+async def inject_stream_anomaly(duration: int = 15):
+    steps = stream_service.inject_anomaly(duration=duration)
+    return {"injected": True, "duration": steps, "message": f"Injected anomaly spike for next {steps} timesteps"}
+
+
+@router.post(
+    "/stream/reset",
+    summary="Reset stream replay back to timestep 0",
+)
+async def reset_stream():
+    new_idx = stream_service.seek(0)
+    return {"current_index": new_idx, "message": "Stream reset to timestep 0"}
 
 
 # ═══════════════════════════════════════════════

@@ -77,6 +77,14 @@ export const getModelMetadata = () => apiClient.get('/api/v1/model');
 export const getStreamData = () => apiClient.get('/api/v1/stream');
 
 /**
+ * Stream controls for demo and inspection
+ */
+export const seekStream = (index) => apiClient.post('/api/v1/stream/seek', { index });
+export const jumpToAnomaly = () => apiClient.post('/api/v1/stream/anomaly');
+export const injectAnomaly = (duration = 15) => apiClient.post(`/api/v1/stream/inject?duration=${duration}`);
+export const resetStream = () => apiClient.post('/api/v1/stream/reset');
+
+/**
  * Get evaluation report — FR-005
  */
 export const getEvaluationReport = () => apiClient.get('/api/v1/evaluation');
