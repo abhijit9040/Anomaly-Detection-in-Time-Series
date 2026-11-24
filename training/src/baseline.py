@@ -1,170 +1,260 @@
 """
-Statistical Baseline Anomaly Detector.
+Fair Statistical & Classical ML Baselines for Time-Series Anomaly Detection.
 
-Implements a baseline method for time-series anomaly detection
-using a Moving Average and Z-score approach.
-
-Methodology:
-1. Fit: Calculate the mean and std deviation of the training data.
-2. Predict: For test data, calculate the moving average, then compute
-   the Z-score of the deviation from the moving average.
-3. Anomaly Score: The maximum Z-score across all sensor features 
-   for a given timestep.
-4. Evaluation: Compare against ground truth labels using Precision, 
-   Recall, and F1-score.
+Protocol guarantees (Phase 4):
+1. Same unit: Test windows (shape: window_size x 38), labeled 1 if any timestep in the window is anomalous.
+2. Same threshold protocol: Threshold selected strictly on VALIDATION windows (normal only), using the same percentile rule (default: 99.0th percentile).
+3. Evaluates:
+   (a) Moving-Average Z-Score
+   (b) Isolation Forest
+   (c) PCA Reconstruction Error
+   (d) Trivial "Flag Everything" reference
 """
 
 from __future__ import annotations
 
+import json
 import logging
-from typing import Tuple
+from pathlib import Path
+from typing import Any
 
 import numpy as np
-import pandas as pd
-from sklearn.metrics import precision_score, recall_score, f1_score, confusion_matrix
+from sklearn.decomposition import PCA
+from sklearn.ensemble import IsolationForest
 
-from src.data_loader import load_smd_machine
 from src.config import load_config
-from src.preprocessing import fit_scaler, transform_data
+from src.data_loader import load_smd_machine
+from src.metrics import (
+    compute_event_metrics,
+    compute_trivial_reference,
+    compute_window_metrics,
+)
+from src.preprocessing import preprocess_pipeline
 
 logger = logging.getLogger(__name__)
 
+
 class MovingAverageZScoreBaseline:
-    """
-    Baseline anomaly detector using Moving Average and Z-Score.
-    """
+    """Window-level Moving-Average Z-Score anomaly detector."""
+
     def __init__(self, window_size: int = 30):
         self.window_size = window_size
-        self.train_mean = None
-        self.train_std = None
-        
-    def fit(self, train_data: np.ndarray):
-        """
-        Fit the baseline by calculating global mean and std for each feature
-        from the training data.
-        """
-        self.train_mean = np.mean(train_data, axis=0)
-        self.train_std = np.std(train_data, axis=0) + 1e-8 # prevent division by zero
-        logger.info(f"Baseline fitted on {train_data.shape[0]} samples.")
-        
-    def predict_scores(self, data: np.ndarray) -> np.ndarray:
-        """
-        Calculate anomaly scores for the given data.
-        Score = max_feature ( |x - moving_average| / train_std )
-        """
-        if self.train_mean is None or self.train_std is None:
-            raise ValueError("Model must be fitted before prediction.")
-            
-        df = pd.DataFrame(data)
-        # Calculate moving average
-        moving_avg = df.rolling(window=self.window_size, min_periods=1).mean().values
-        
-        # Calculate deviation from moving average, scaled by train_std
-        deviations = np.abs(data - moving_avg)
-        z_scores = deviations / self.train_std
-        
-        # Aggregate feature scores by taking the maximum deviation across all features
-        # (If any sensor is acting highly anomalous, flag the timestep)
-        anomaly_scores = np.max(z_scores, axis=1)
-        return anomaly_scores
+        self.feature_means: np.ndarray | None = None
+        self.feature_stds: np.ndarray | None = None
 
-def evaluate_baseline(scores: np.ndarray, labels: np.ndarray, threshold: float) -> dict:
+    def fit(self, train_windows: np.ndarray) -> None:
+        """Fit global mean and std from training windows."""
+        flattened = train_windows.reshape(-1, train_windows.shape[-1])
+        self.feature_means = np.mean(flattened, axis=0)
+        self.feature_stds = np.std(flattened, axis=0) + 1e-4
+
+    def compute_scores(self, windows: np.ndarray) -> np.ndarray:
+        """Compute window anomaly score as the max sensor deviation across time."""
+        # windows: (N, W, D)
+        devs = np.abs(windows - self.feature_means) / self.feature_stds
+        # Mean deviation over time for each sensor, then max over sensors
+        sensor_scores = np.mean(devs, axis=1)  # (N, D)
+        window_scores = np.max(sensor_scores, axis=1)  # (N,)
+        return window_scores
+
+
+class PCABaseline:
+    """PCA Reconstruction Error baseline."""
+
+    def __init__(self, n_components: int = 10, random_state: int = 42):
+        self.n_components = n_components
+        self.random_state = random_state
+        self.pca = PCA(n_components=n_components, random_state=random_state)
+
+    def fit(self, train_windows: np.ndarray) -> None:
+        """Fit PCA on flattened training windows."""
+        n_samples = len(train_windows)
+        flattened = train_windows.reshape(n_samples, -1)
+        # Subsample if dataset is large for CPU efficiency
+        if n_samples > 10000:
+            idx = np.random.RandomState(self.random_state).choice(n_samples, 10000, replace=False)
+            flattened = flattened[idx]
+        self.pca.fit(flattened)
+
+    def compute_scores(self, windows: np.ndarray) -> np.ndarray:
+        """Compute MSE reconstruction error for each window."""
+        n_samples = len(windows)
+        flattened = windows.reshape(n_samples, -1)
+        recon = self.pca.inverse_transform(self.pca.transform(flattened))
+        mse = np.mean((flattened - recon) ** 2, axis=1)
+        return mse
+
+
+class IsolationForestBaseline:
+    """Isolation Forest baseline trained on normal window summary statistics."""
+
+    def __init__(self, n_estimators: int = 100, random_state: int = 42):
+        self.clf = IsolationForest(
+            n_estimators=n_estimators,
+            random_state=random_state,
+            n_jobs=-1,
+        )
+        self.random_state = random_state
+
+    def _extract_features(self, windows: np.ndarray) -> np.ndarray:
+        # Features: mean and std per sensor across the window (shape: N, 2 * D = 76)
+        means = np.mean(windows, axis=1)
+        stds = np.std(windows, axis=1)
+        return np.hstack([means, stds])
+
+    def fit(self, train_windows: np.ndarray) -> None:
+        feats = self._extract_features(train_windows)
+        n_samples = len(feats)
+        if n_samples > 8000:
+            idx = np.random.RandomState(self.random_state).choice(n_samples, 8000, replace=False)
+            feats = feats[idx]
+        self.clf.fit(feats)
+
+    def compute_scores(self, windows: np.ndarray) -> np.ndarray:
+        feats = self._extract_features(windows)
+        # Invert score_samples so higher score = more anomalous
+        scores = -self.clf.score_samples(feats)
+        return scores
+
+
+def evaluate_baseline_method(
+    name: str,
+    val_scores: np.ndarray,
+    test_scores: np.ndarray,
+    test_labels: np.ndarray,
+    percentile: float = 99.0,
+) -> dict[str, Any]:
     """
-    Evaluate the anomaly scores against labels using a fixed threshold.
+    Select threshold on validation scores, evaluate on test scores.
     """
-    predictions = (scores > threshold).astype(int)
-    
-    precision = precision_score(labels, predictions, zero_division=0)
-    recall = recall_score(labels, predictions, zero_division=0)
-    f1 = f1_score(labels, predictions, zero_division=0)
-    cm = confusion_matrix(labels, predictions)
-    
+    threshold = float(np.percentile(val_scores, percentile))
+    preds = (test_scores > threshold).astype(int)
+
+    w_metrics = compute_window_metrics(test_labels, preds, anomaly_scores=test_scores)
+    e_metrics = compute_event_metrics(test_labels, preds)
+
     return {
-        "precision": precision,
-        "recall": recall,
-        "f1": f1,
-        "confusion_matrix": cm,
-        "threshold": threshold
+        "method": name,
+        "threshold": round(threshold, 6),
+        "threshold_strategy": f"Val {percentile}th Percentile",
+        "precision": w_metrics["precision"],
+        "recall": w_metrics["recall"],
+        "f1": w_metrics["f1"],
+        "flagged_rate": w_metrics["flagged_rate"],
+        "auc_roc": w_metrics["auc_roc"],
+        "auc_pr": w_metrics["auc_pr"],
+        "confusion_matrix": w_metrics["confusion_matrix"],
+        "event_metrics": e_metrics,
     }
 
-def find_best_threshold(scores: np.ndarray, labels: np.ndarray, num_steps: int = 100) -> float:
-    """
-    Find the threshold that maximizes F1 score.
-    Note: In a real scenario, this should be done on a validation set, 
-    but for this baseline demonstration we scan the test set to find the best possible F1.
-    """
-    min_score = np.min(scores)
-    max_score = np.max(scores)
-    thresholds = np.linspace(min_score, max_score, num_steps)
-    
-    best_f1 = 0.0
-    best_thresh = min_score
-    
-    for thresh in thresholds:
-        preds = (scores > thresh).astype(int)
-        f1 = f1_score(labels, preds, zero_division=0)
-        if f1 > best_f1:
-            best_f1 = f1
-            best_thresh = thresh
-            
-    return best_thresh
 
-if __name__ == "__main__":
+def run_all_baselines(save_artifacts: bool = True) -> dict[str, Any]:
+    """Execute all baselines and save results."""
     logging.basicConfig(level=logging.INFO, format="%(asctime)s | %(levelname)s | %(message)s")
-    
-    # 1. Load config and data
+    logger.info("Running Fair Baselines Suite (Window-Level, Validation-Threshold Protocol)...")
+
     config = load_config()
     machine_id = config.dataset.machine_id
-    logger.info(f"Evaluating Baseline on Machine: {machine_id}")
-    
-    data = load_smd_machine(machine_id)
-    train_data = data["train"]
-    test_data = data["test"]
-    test_labels = data["test_labels"]
-    
-    # 2. Preprocess (Scale data safely fitting only on train)
-    logger.info("Scaling data...")
-    scaler = fit_scaler(train_data, method=config.preprocessing.scaler)
-    train_scaled = transform_data(train_data, scaler)
-    test_scaled = transform_data(test_data, scaler)
-    
-    # 3. Fit Baseline Model
-    logger.info("Fitting Moving Average Z-Score Baseline...")
-    baseline = MovingAverageZScoreBaseline(window_size=config.preprocessing.window_size)
-    baseline.fit(train_scaled)
-    
-    # 4. Predict anomaly scores on Test set
-    logger.info("Predicting test set anomaly scores...")
-    test_scores = baseline.predict_scores(test_scaled)
-    
-    # 5. Evaluate
-    # For a fair comparison, we find the threshold that gives the best F1
-    best_thresh = find_best_threshold(test_scores, test_labels)
-    metrics = evaluate_baseline(test_scores, test_labels, threshold=best_thresh)
-    
-    logger.info("=== Baseline Evaluation Results ===")
-    logger.info(f"Best Threshold: {metrics['threshold']:.4f}")
-    logger.info(f"Precision:      {metrics['precision']:.4f}")
-    logger.info(f"Recall:         {metrics['recall']:.4f}")
-    logger.info(f"F1 Score:       {metrics['f1']:.4f}")
-    logger.info("Confusion Matrix:")
-    logger.info(f"\n{metrics['confusion_matrix']}")
-    
-    # Output to a small report file
-    import json
-    from pathlib import Path
-    
-    report = {
+
+    raw_data = load_smd_machine(machine_id)
+    prep = preprocess_pipeline(
+        train_raw=raw_data["train"],
+        test_raw=raw_data["test"],
+        test_labels=raw_data["test_labels"],
+        window_size=config.preprocessing.window_size,
+        step_size=config.preprocessing.step_size,
+        val_split=config.preprocessing.val_split,
+        scaler_method=config.preprocessing.scaler,
+        std_floor=config.preprocessing.std_floor,
+        clip_value=config.preprocessing.clip_value,
+        seed=config.training.seed,
+        machine_id=machine_id,
+    )
+
+    train_w = prep["train_windows"]
+    val_w = prep["val_windows"]
+    test_w = prep["test_windows"]
+    test_labels = prep["test_window_labels"]
+
+    percentile = config.threshold.percentile
+
+    # 1. Moving Average Z-score
+    logger.info("Evaluating (1/3) Moving-Average Z-Score Baseline...")
+    ma = MovingAverageZScoreBaseline(window_size=config.preprocessing.window_size)
+    ma.fit(train_w)
+    ma_val = ma.compute_scores(val_w)
+    ma_test = ma.compute_scores(test_w)
+    res_ma = evaluate_baseline_method("MovingAverage_ZScore", ma_val, ma_test, test_labels, percentile)
+
+    # 2. PCA Reconstruction Error
+    logger.info("Evaluating (2/3) PCA Reconstruction Error Baseline...")
+    pca = PCABaseline(n_components=10, random_state=config.training.seed)
+    pca.fit(train_w)
+    pca_val = pca.compute_scores(val_w)
+    pca_test = pca.compute_scores(test_w)
+    res_pca = evaluate_baseline_method("PCA_Reconstruction", pca_val, pca_test, test_labels, percentile)
+
+    # 3. Isolation Forest
+    logger.info("Evaluating (3/3) Isolation Forest Baseline...")
+    iso = IsolationForestBaseline(n_estimators=100, random_state=config.training.seed)
+    iso.fit(train_w)
+    iso_val = iso.compute_scores(val_w)
+    iso_test = iso.compute_scores(test_w)
+    res_iso = evaluate_baseline_method("IsolationForest", iso_val, iso_test, test_labels, percentile)
+
+    # 4. Trivial Reference: Flag Everything
+    trivial = compute_trivial_reference(test_labels)
+
+    baselines_list = [res_ma, res_pca, res_iso]
+
+    out_data = {
         "machine_id": machine_id,
-        "method": "MovingAverage_ZScore",
-        "precision": metrics['precision'],
-        "recall": metrics['recall'],
-        "f1": metrics['f1'],
-        "best_threshold": metrics['threshold']
+        "method": res_ma["method"],
+        "threshold": res_ma["threshold"],
+        "threshold_strategy": res_ma["threshold_strategy"],
+        "precision": res_ma["precision"],
+        "recall": res_ma["recall"],
+        "f1": res_ma["f1"],
+        "flagged_rate": res_ma["flagged_rate"],
+        "auc_roc": res_ma["auc_roc"],
+        "auc_pr": res_ma["auc_pr"],
+        "baselines": baselines_list,
+        "trivial_reference": trivial,
     }
-    
-    out_path = Path(__file__).parent.parent / "artifacts" / "baseline_results.json"
-    out_path.parent.mkdir(exist_ok=True, parents=True)
-    with open(out_path, "w") as f:
-        json.dump(report, f, indent=2)
-    logger.info(f"Saved baseline results to {out_path}")
+
+    logger.info("=== Baseline Results Summary ===")
+    logger.info("%-25s | %-8s | %-8s | %-8s | %-8s | %-8s", "Method", "Prec", "Recall", "F1", "AUROC", "Flagged")
+    logger.info("-" * 75)
+    for b in baselines_list:
+        logger.info(
+            "%-25s | %-8.4f | %-8.4f | %-8.4f | %-8s | %-8.4f",
+            b["method"],
+            b["precision"],
+            b["recall"],
+            b["f1"],
+            str(b["auc_roc"]),
+            b["flagged_rate"],
+        )
+    logger.info(
+        "%-25s | %-8.4f | %-8.4f | %-8.4f | %-8s | %-8.4f",
+        "Flag_Everything_Trivial",
+        trivial["precision"],
+        trivial["recall"],
+        trivial["f1"],
+        "0.5000",
+        trivial["flagged_rate"],
+    )
+
+    if save_artifacts:
+        artifacts_dir = Path(__file__).parent.parent / "artifacts"
+        artifacts_dir.mkdir(parents=True, exist_ok=True)
+        out_file = artifacts_dir / "baseline_results.json"
+        with open(out_file, "w", encoding="utf-8") as f:
+            json.dump(out_data, f, indent=2)
+        logger.info("Saved baseline results to %s", out_file)
+
+    return out_data
+
+
+if __name__ == "__main__":
+    run_all_baselines()
