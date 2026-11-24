@@ -7,6 +7,7 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
 import Plot from 'react-plotly.js';
 import { checkHealth, getStreamData, detectBatch, jumpToAnomaly, injectAnomaly, resetStream } from '../services/api';
+import { advanceAlertState, initialAlertState } from '../utils/alertEvents';
 
 const MAX_POINTS = 200;
 
@@ -36,6 +37,7 @@ export default function Dashboard() {
 
   const threshold = useRef(0.8281);
   const streamRef = useRef(null);
+  const alertStateRef = useRef(initialAlertState); // tracks the current anomaly event
 
   // Health polling
   useEffect(() => {
@@ -82,14 +84,29 @@ export default function Dashboard() {
         setAnomalyFlags(prev => [...prev.slice(-MAX_POINTS), d.is_anomaly]);
         setLastError(err);
 
-        if (d.is_anomaly) {
+        // One alert per anomaly EVENT, not one per anomalous timestep.
+        const step = advanceAlertState(alertStateRef.current, d.is_anomaly);
+        alertStateRef.current = step.state;
+        const topSensor = top3[0]
+          ? `${top3[0].sensor_name} (${top3[0].reconstruction_error.toFixed(3)})`
+          : 'Ch-00';
+
+        if (step.isNewEvent) {
           setAnomalyCount(c => c + 1);
           setRecentAlerts(prev => [{
             time: now,
             error: err.toFixed(4),
+            errorNum: err,
             threshold: threshold.current.toFixed(4),
-            topSensor: top3[0] ? `${top3[0].sensor_name} (${top3[0].reconstruction_error.toFixed(3)})` : 'Ch-00',
+            topSensor,
           }, ...prev.slice(0, 9)]);
+        } else if (d.is_anomaly) {
+          // Same event still running: keep the single row, just raise it to the peak.
+          setRecentAlerts(prev =>
+            prev.length && err > prev[0].errorNum
+              ? [{ ...prev[0], error: err.toFixed(4), errorNum: err, topSensor }, ...prev.slice(1)]
+              : prev
+          );
         }
       }
     } catch {
@@ -154,6 +171,7 @@ export default function Dashboard() {
     setActionLoading(true);
     try {
       const res = await jumpToAnomaly();
+      alertStateRef.current = initialAlertState;
       setStreamNotice(`⚡ Jumped to timestep ${res.data.current_index} — Real SMD anomaly incoming in ~7 seconds!`);
       setTimeout(() => setStreamNotice(null), 6000);
       if (!streaming && health?.model_loaded) startStream();
@@ -182,6 +200,7 @@ export default function Dashboard() {
     setActionLoading(true);
     try {
       await resetStream();
+      alertStateRef.current = initialAlertState;
       setRecentAlerts([]);
       setAnomalyCount(0);
       setStreamNotice('🔄 Stream reset to normal baseline (Timestep 0).');
