@@ -6,7 +6,7 @@
 
 import { useState, useEffect, useRef, useCallback } from 'react';
 import Plot from 'react-plotly.js';
-import { checkHealth, getStreamData, detectBatch, jumpToAnomaly, injectAnomaly, resetStream } from '../services/api';
+import { checkHealth, getStreamData, detectBatch, jumpToAnomaly, injectAnomaly, resetStream, getModelMetadata } from '../services/api';
 import { advanceAlertState, initialAlertState } from '../utils/alertEvents';
 
 const MAX_POINTS = 200;
@@ -35,11 +35,11 @@ export default function Dashboard() {
   const [batchResults, setBatchResults] = useState(null);
   const [batchLoading, setBatchLoading] = useState(false);
 
-  const threshold = useRef(0.8281);
+  const threshold = useRef(0.5); // Dynamically updated from model metadata on mount
   const streamRef = useRef(null);
   const alertStateRef = useRef(initialAlertState); // tracks the current anomaly event
 
-  // Health polling
+  // Health & Model Metadata polling
   useEffect(() => {
     const poll = async () => {
       try {
@@ -51,6 +51,13 @@ export default function Dashboard() {
       }
     };
     poll();
+    getModelMetadata()
+      .then(res => {
+        if (res.data?.threshold) {
+          threshold.current = res.data.threshold;
+        }
+      })
+      .catch(() => {});
     const id = setInterval(poll, 10000);
     return () => clearInterval(id);
   }, []);
