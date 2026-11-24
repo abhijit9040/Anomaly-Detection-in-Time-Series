@@ -1,0 +1,32 @@
+[
+  {
+    "configuration": "No Phase 1 Fix (Raw Scaling)",
+    "threshold": 2.58157,
+    "flagged_rate": 0.4054,
+    "precision": 0.2438,
+    "recall": 0.961,
+    "f1": 0.3889,
+    "auc_roc": 0.9239,
+    "auc_pr": 0.6683
+  },
+  {
+    "configuration": "Phase 1 Fix (Floor=0.05, Clip=10.0)",
+    "threshold": 0.154136,
+    "flagged_rate": 0.2301,
+    "precision": 0.4242,
+    "recall": 0.9491,
+    "f1": 0.5864,
+    "auc_roc": 0.9461,
+    "auc_pr": 0.6125
+  },
+  {
+    "configuration": "Phase 1 Fix + Error Normalization (Val p99)",
+    "threshold": 0.480337,
+    "flagged_rate": 0.4326,
+    "precision": 0.2355,
+    "recall": 0.9904,
+    "f1": 0.3805,
+    "auc_roc": 0.9279,
+    "auc_pr": 0.6066
+  }
+]
