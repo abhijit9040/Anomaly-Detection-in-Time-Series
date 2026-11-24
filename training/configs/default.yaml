@@ -19,6 +19,8 @@ preprocessing:
   step_size: 1                  # Sliding window stride
   val_split: 0.2                # Fraction of training data for validation
   scaler: "standard"            # Normalization method: "standard" or "minmax"
+  std_floor: 0.05               # Minimum std floor to prevent near-constant sensor blow-up
+  clip_value: 10.0              # Max absolute z-score after scaling (null to disable)
 
 # ── Model Architecture ──────────────────────────
 model:
@@ -27,6 +29,8 @@ model:
   latent_size: 32               # Bottleneck / latent dimension
   num_layers: 2                 # Number of LSTM layers
   dropout: 0.1                  # Dropout rate between LSTM layers
+  error_normalization: "none"   # "none" or "per_sensor_val_p99" (Phase 6)
+  ignored_sensors: []           # Optional list of sensor indices to ignore (default empty)
 
 # ── Training ─────────────────────────────────────
 training:
@@ -48,7 +52,7 @@ training:
 # training/validation partition."
 threshold:
   method: "percentile"          # "percentile" or "std_dev"
-  percentile: 95                # If method=percentile: use this percentile
+  percentile: 99.0              # Default rule decided in advance: 99th percentile of val errors
   std_multiplier: 3.0           # If method=std_dev: mean + N * std
 
 # ── Evaluation ───────────────────────────────────

@@ -30,6 +30,8 @@ class PreprocessingConfig:
     step_size: int = 1
     val_split: float = 0.2
     scaler: str = "standard"
+    std_floor: float = 0.05
+    clip_value: float | None = 10.0
 
 
 @dataclass
@@ -39,6 +41,8 @@ class ModelConfig:
     latent_size: int = 32
     num_layers: int = 2
     dropout: float = 0.1
+    error_normalization: str = "none"
+    ignored_sensors: list[int] = field(default_factory=list)
 
 
 @dataclass
@@ -59,7 +63,7 @@ class TrainingConfig:
 @dataclass
 class ThresholdConfig:
     method: str = "percentile"
-    percentile: float = 95.0
+    percentile: float = 99.0
     std_multiplier: float = 3.0
 
 
