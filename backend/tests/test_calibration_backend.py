@@ -82,6 +82,10 @@ async def test_api_model_metadata_returns_run_manifest():
         assert data["threshold"] > 0
         assert "threshold_method" in data
         assert "run_manifest" in data
+        assert data["run_manifest"] is not None
+        assert data["run_manifest"]["git_dirty"] is True
+        assert "git_commit_semantics" in data["run_manifest"]
+        assert "code_committed_in" in data["run_manifest"]
         assert "model_version" in data
         assert "n_features" in data
         assert data["n_features"] == 38
