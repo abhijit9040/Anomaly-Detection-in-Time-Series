@@ -144,6 +144,28 @@ Evaluated on held-out test data from the **Server Machine Dataset (machine-1-1, 
 4. **Oracle Diagnostic Bound:** The best possible theoretical test F1 is **61.94%** (at threshold `0.3066`, precision 53.20%, recall 74.13%). This is an *oracle / diagnostic bound only* that uses ground-truth test labels to select the threshold, and must never be used for deployment or headline claims.
 5. **Evaluation Unit:** All metrics are computed strictly on **sliding windows of size 30 with stride 1** ($W=30, S=1$). A window is labeled ground-truth positive if any timestep within it is labeled anomalous.
 
+### Causal Alert Post-Processing (False-Alarm Reduction)
+
+To suppress transient noise bursts and reduce operational false alarms, causal score post-processing is applied:
+- **Causal trailing mean smoothing** ($k=5$ trailing timesteps)
+- **Dual-threshold hysteresis** (turns ON $> \text{threshold}$, turns OFF $< 0.8 \times \text{threshold}$)
+- **Minimum duration filter** ($m=3$ consecutive active windows required)
+
+Thresholds are strictly re-derived on the smoothed validation distribution (p99).
+
+| Model & Configuration | Evaluation Slice | Threshold | Precision | Recall | F1 Score | Event Recall | False Alarms | Mean Delay | Alerts / 1k |
+|:---|:---|:---:|:---:|:---:|:---:|:---:|:---:|:---:|:---:|
+| **LSTM Raw** | Full Test (N=28,450) | 0.1541 | 42.42% | 94.91% | 58.64% | 8/8 (100.00%) | 94 | 0.0 steps | 4.11 |
+| **LSTM Post-processed (k=5, m=3)** | Full Test (N=28,450) | 0.1529 | 40.63% | 96.27% | 57.15% | 8/8 (100.00%) | **46 (-51.1%)** | 2.0 steps | **2.00 (-51.3%)** |
+| **PCA Raw** | Full Test (N=28,450) | 0.2350 | 60.90% | 58.03% | 59.43% | 8/8 (100.00%) | 42 | 0.0 steps | 3.06 |
+| **PCA Post-processed (k=5, m=3)** | Full Test (N=28,450) | 0.2345 | 58.34% | 61.07% | 59.68% | 8/8 (100.00%) | **24 (-42.9%)** | 2.9 steps | **1.79 (-41.5%)** |
+| **LSTM Raw (Held-Out Benchmark)** | Held-out 70% (N=19,915) | 0.1541 | 45.94% | 94.91% | **61.91%** | 8/8 (100.00%) | 67 | 0.0 steps | 4.52 |
+| **LSTM Post-proc (Fixed Defaults)** | Held-out 70% (N=19,915) | 0.1529 | 44.18% | 96.27% | **60.57%** | 8/8 (100.00%) | **29 (-56.7%)** | 2.0 steps | **2.01 (-55.5%)** |
+
+**Decision Gate Summary:**
+- **Post-Processing Gate (PASSED):** On the held-out 70% slice, false-alarm bursts drop by 56.72% (from 67 to 29, hurdle: >=30%), event recall is maintained at 100% (8/8 events caught, hurdle: >=7/8), and window F1 changes by only -1.34 pp (hurdle: <=2.0 pp). Integrated into streaming pipeline.
+- **Ensemble Gate (FAILED - Negative Result):** Offline LSTM+PCA ensemble achieved held-out F1 = 63.33% (+1.42 pp vs LSTM, hurdle: >=2.0 pp). As per the protocol, the ensemble was not integrated into deployment.
+
 <!-- RESULTS:END -->
 
 ---

@@ -121,6 +121,8 @@ class StreamDataPoint(BaseModel):
     sensor_values: list[float]
     is_anomaly: bool | None = None
     reconstruction_error: float | None = None
+    smoothed_error: float | None = None
+    alert_active: bool | None = None
     sensor_errors: list[SensorErrorBreakdown] | None = None
     timestep: int | None = None
     ground_truth_label: int | None = None

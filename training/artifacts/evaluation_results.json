@@ -197,5 +197,75 @@
         "f1": 0.7452
       }
     }
+  },
+  "alerting": {
+    "status": "integrated",
+    "gate_outcome": "PASS",
+    "parameters": {
+      "k": 5,
+      "m": 3,
+      "low_ratio": 0.8,
+      "method": "mean"
+    },
+    "threshold": 0.152915,
+    "threshold_strategy": "Smoothed Val 99.0th Percentile",
+    "full_test": {
+      "threshold": 0.152915,
+      "precision": 0.4063,
+      "recall": 0.9627,
+      "f1": 0.5715,
+      "flagged_rate": 0.2437,
+      "event_recall": 1.0,
+      "detected_events": "8/8",
+      "false_alarm_events": 46,
+      "mean_detection_delay": 2.0,
+      "alerts_per_1000_windows": 2.0
+    },
+    "heldout_70pct": {
+      "raw": {
+        "threshold": 0.154136,
+        "precision": 0.4594,
+        "recall": 0.9491,
+        "f1": 0.6191,
+        "event_recall": 1.0,
+        "false_alarm_events": 67,
+        "mean_detection_delay": 0.0,
+        "alerts_per_1000_windows": 4.52
+      },
+      "postprocessed_fixed_defaults": {
+        "threshold": 0.152915,
+        "precision": 0.4418,
+        "recall": 0.9627,
+        "f1": 0.6057,
+        "event_recall": 1.0,
+        "false_alarm_events": 29,
+        "false_alarm_reduction_pct": 56.72,
+        "mean_detection_delay": 2.0,
+        "alerts_per_1000_windows": 2.01
+      },
+      "calibration_selected": {
+        "selected_params": {
+          "k": 1,
+          "m": 10
+        },
+        "threshold": 0.154136,
+        "precision": 0.4519,
+        "recall": 0.9293,
+        "f1": 0.6081,
+        "event_recall": 1.0,
+        "false_alarm_events": 27,
+        "mean_detection_delay": 8.0,
+        "alerts_per_1000_windows": 1.96
+      }
+    },
+    "ensemble_gate": {
+      "outcome": "FAIL (Negative Result)",
+      "ensemble_heldout_f1": 0.6333,
+      "lstm_heldout_f1": 0.6191,
+      "pca_heldout_f1": 0.5997,
+      "gain_vs_lstm_pp": 1.42,
+      "required_gain_pp": 2.0,
+      "status": "not deployed"
+    }
   }
 }
