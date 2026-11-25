@@ -34,6 +34,7 @@ export default function SensorsPage() {
   const [latestAnomalies, setLatestAnomalies] = useState(0);
   const [health, setHealth] = useState(null);
   const [meta, setMeta] = useState(null);
+  const [lastStreamPoint, setLastStreamPoint] = useState(null);
   const [sensorThreshold, setSensorThreshold] = useState(0.5);
 
   const streamRef = useRef(null);
@@ -56,6 +57,7 @@ export default function SensorsPage() {
     try {
       const res = await getStreamData();
       const d = res.data;
+      setLastStreamPoint(d);
       const now = new Date().toLocaleTimeString();
 
       setStreamData(prev => [...prev.slice(-MAX_POINTS), now]);
@@ -123,7 +125,7 @@ export default function SensorsPage() {
       <header className="page-header">
         <div>
           <h1 className="page-title">Sensor Streams & Root Cause Analysis</h1>
-          <p className="page-subtitle">Multi-channel IoT telemetry ({meta?.n_features || 38} SMD sensor channels)</p>
+          <p className="page-subtitle">Multi-channel IoT telemetry ({meta?.n_features ?? lastStreamPoint?.sensor_values?.length ?? 'n/a'} SMD sensor channels)</p>
         </div>
         <div style={{ display: 'flex', gap: '10px', alignItems: 'center' }}>
           <button
