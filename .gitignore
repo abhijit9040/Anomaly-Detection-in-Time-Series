@@ -112,6 +112,7 @@ logs/
 # ═══════════════════════════════════════════════
 # Documentation files (Explicitly keep)
 # ═══════════════════════════════════════════════
+Advanced_DataScience_Documentation*/
 !PRD.md
 !PRD.html
 !PRD.docx
