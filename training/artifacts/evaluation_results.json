@@ -1,9 +1,201 @@
 {
   "machine_id": "machine-1-1",
   "method": "LSTM_Autoencoder",
-  "threshold": 0.8280734419822693,
-  "threshold_strategy": "Val Mean + 3.0*Std",
-  "precision": 0.19825767372218064,
-  "recall": 0.995557074504443,
-  "f1": 0.3306657585561042
+  "threshold": 0.154136,
+  "threshold_strategy": "Val 99.0th Percentile",
+  "precision": 0.4242,
+  "recall": 0.9491,
+  "f1": 0.5864,
+  "flagged_rate": 0.2301,
+  "anomaly_rate": 0.1028,
+  "auc_roc": 0.9461,
+  "auc_pr": 0.6125,
+  "confusion_matrix": {
+    "tp": 2777,
+    "fp": 3769,
+    "fn": 149,
+    "tn": 21755
+  },
+  "unit": "window (size=30, stride=1, any-anomaly labeled)",
+  "event_metrics": {
+    "unit": "event (contiguous anomaly segments in test data)",
+    "total_events": 8,
+    "detected_events": 8,
+    "event_recall": 1.0,
+    "false_alarm_events": 94,
+    "mean_detection_delay": 0.0,
+    "point_adjusted": {
+      "description": "point-adjust (optimistic, for comparison with literature)",
+      "precision": 0.437,
+      "recall": 1.0,
+      "f1": 0.6083
+    }
+  },
+  "trivial_reference": {
+    "method": "Flag_Everything_Trivial",
+    "precision": 0.1028,
+    "recall": 1.0,
+    "f1": 0.1865,
+    "flagged_rate": 1.0,
+    "note": "Trivial reference that flags every single window"
+  },
+  "best_baseline": {
+    "method": "PCA_Reconstruction",
+    "threshold": 0.235026,
+    "threshold_strategy": "Val 99.0th Percentile",
+    "precision": 0.609,
+    "recall": 0.5803,
+    "f1": 0.5943,
+    "flagged_rate": 0.098,
+    "auc_roc": 0.9466,
+    "auc_pr": 0.7174,
+    "confusion_matrix": {
+      "tp": 1698,
+      "fp": 1090,
+      "fn": 1228,
+      "tn": 24434
+    },
+    "event_metrics": {
+      "unit": "event (contiguous anomaly segments in test data)",
+      "total_events": 8,
+      "detected_events": 8,
+      "event_recall": 1.0,
+      "false_alarm_events": 42,
+      "mean_detection_delay": 0.0,
+      "point_adjusted": {
+        "description": "point-adjust (optimistic, for comparison with literature)",
+        "precision": 0.7286,
+        "recall": 1.0,
+        "f1": 0.843
+      }
+    }
+  },
+  "improvements": {
+    "vs_baseline": {
+      "baseline_method": "PCA_Reconstruction",
+      "f1_delta_abs": -0.0079,
+      "f1_improvement_pct": -1.33
+    },
+    "vs_trivial": {
+      "f1_delta_abs": 0.3999,
+      "f1_improvement_pct": 214.42
+    }
+  },
+  "sensitivity_table": [
+    {
+      "method": "percentile",
+      "parameter": "p95.0",
+      "threshold": 0.117818,
+      "flagged_rate": 0.2785,
+      "precision": 0.3616,
+      "recall": 0.9792,
+      "f1": 0.5281,
+      "selection_note": "Sensitivity sweep only"
+    },
+    {
+      "method": "percentile",
+      "parameter": "p99.0",
+      "threshold": 0.154136,
+      "flagged_rate": 0.2301,
+      "precision": 0.4242,
+      "recall": 0.9491,
+      "f1": 0.5864,
+      "selection_note": "Default selection rule is p99.0 (decided in advance)"
+    },
+    {
+      "method": "percentile",
+      "parameter": "p99.5",
+      "threshold": 0.186833,
+      "flagged_rate": 0.2039,
+      "precision": 0.4527,
+      "recall": 0.8975,
+      "f1": 0.6018,
+      "selection_note": "Sensitivity sweep only"
+    },
+    {
+      "method": "percentile",
+      "parameter": "p99.9",
+      "threshold": 0.356432,
+      "flagged_rate": 0.1314,
+      "precision": 0.5447,
+      "recall": 0.6958,
+      "f1": 0.611,
+      "selection_note": "Sensitivity sweep only"
+    },
+    {
+      "method": "std_dev",
+      "parameter": "mean+2.0*std",
+      "threshold": 0.120541,
+      "flagged_rate": 0.2749,
+      "precision": 0.3662,
+      "recall": 0.9788,
+      "f1": 0.533,
+      "selection_note": "Sensitivity sweep only"
+    },
+    {
+      "method": "std_dev",
+      "parameter": "mean+3.0*std",
+      "threshold": 0.152875,
+      "flagged_rate": 0.2318,
+      "precision": 0.422,
+      "recall": 0.9511,
+      "f1": 0.5846,
+      "selection_note": "Sensitivity sweep only"
+    },
+    {
+      "method": "std_dev",
+      "parameter": "mean+4.0*std",
+      "threshold": 0.185209,
+      "flagged_rate": 0.2051,
+      "precision": 0.4503,
+      "recall": 0.8982,
+      "f1": 0.5999,
+      "selection_note": "Sensitivity sweep only"
+    },
+    {
+      "method": "std_dev",
+      "parameter": "mean+5.0*std",
+      "threshold": 0.217543,
+      "flagged_rate": 0.1841,
+      "precision": 0.4822,
+      "recall": 0.8633,
+      "f1": 0.6188,
+      "selection_note": "Sensitivity sweep only"
+    }
+  ],
+  "oracle_diagnostic": {
+    "status": "oracle / diagnostic only (uses test labels to tune threshold; NEVER use for deployment)",
+    "threshold": 0.306571,
+    "precision": 0.532,
+    "recall": 0.7413,
+    "f1": 0.6194,
+    "flagged_rate": 0.1433
+  },
+  "temporal_calibration": {
+    "description": "Temporal calibration slice (first 30% calibration, last 70% held-out test)",
+    "calibration_samples": 8535,
+    "heldout_samples": 19915,
+    "calibration_threshold": 0.281508,
+    "threshold_strategy": "Calibration 30% slice 99.0th percentile",
+    "precision": 0.5311,
+    "recall": 0.7744,
+    "f1": 0.6301,
+    "flagged_rate": 0.2143,
+    "auc_roc": 0.9249,
+    "auc_pr": 0.6196,
+    "event_metrics": {
+      "unit": "event (contiguous anomaly segments in test data)",
+      "total_events": 8,
+      "detected_events": 8,
+      "event_recall": 1.0,
+      "false_alarm_events": 39,
+      "mean_detection_delay": 0.0,
+      "point_adjusted": {
+        "description": "point-adjust (optimistic, for comparison with literature)",
+        "precision": 0.5939,
+        "recall": 1.0,
+        "f1": 0.7452
+      }
+    }
+  }
 }

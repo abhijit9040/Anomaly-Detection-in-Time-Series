@@ -1,8 +1,115 @@
 {
   "machine_id": "machine-1-1",
   "method": "MovingAverage_ZScore",
-  "precision": 0.094599339841281,
-  "recall": 1.0,
-  "f1": 0.17284742717823687,
-  "best_threshold": 0.0
+  "threshold": 6.055103,
+  "threshold_strategy": "Val 99.0th Percentile",
+  "precision": 0.1841,
+  "recall": 0.9894,
+  "f1": 0.3105,
+  "flagged_rate": 0.5526,
+  "auc_roc": 0.8438,
+  "auc_pr": 0.4877,
+  "baselines": [
+    {
+      "method": "MovingAverage_ZScore",
+      "threshold": 6.055103,
+      "threshold_strategy": "Val 99.0th Percentile",
+      "precision": 0.1841,
+      "recall": 0.9894,
+      "f1": 0.3105,
+      "flagged_rate": 0.5526,
+      "auc_roc": 0.8438,
+      "auc_pr": 0.4877,
+      "confusion_matrix": {
+        "tp": 2895,
+        "fp": 12826,
+        "fn": 31,
+        "tn": 12698
+      },
+      "event_metrics": {
+        "unit": "event (contiguous anomaly segments in test data)",
+        "total_events": 8,
+        "detected_events": 8,
+        "event_recall": 1.0,
+        "false_alarm_events": 16,
+        "mean_detection_delay": 3.88,
+        "point_adjusted": {
+          "description": "point-adjust (optimistic, for comparison with literature)",
+          "precision": 0.1858,
+          "recall": 1.0,
+          "f1": 0.3133
+        }
+      }
+    },
+    {
+      "method": "PCA_Reconstruction",
+      "threshold": 0.235026,
+      "threshold_strategy": "Val 99.0th Percentile",
+      "precision": 0.609,
+      "recall": 0.5803,
+      "f1": 0.5943,
+      "flagged_rate": 0.098,
+      "auc_roc": 0.9466,
+      "auc_pr": 0.7174,
+      "confusion_matrix": {
+        "tp": 1698,
+        "fp": 1090,
+        "fn": 1228,
+        "tn": 24434
+      },
+      "event_metrics": {
+        "unit": "event (contiguous anomaly segments in test data)",
+        "total_events": 8,
+        "detected_events": 8,
+        "event_recall": 1.0,
+        "false_alarm_events": 42,
+        "mean_detection_delay": 0.0,
+        "point_adjusted": {
+          "description": "point-adjust (optimistic, for comparison with literature)",
+          "precision": 0.7286,
+          "recall": 1.0,
+          "f1": 0.843
+        }
+      }
+    },
+    {
+      "method": "IsolationForest",
+      "threshold": 0.66963,
+      "threshold_strategy": "Val 99.0th Percentile",
+      "precision": 0.3495,
+      "recall": 0.4556,
+      "f1": 0.3955,
+      "flagged_rate": 0.1341,
+      "auc_roc": 0.8615,
+      "auc_pr": 0.3909,
+      "confusion_matrix": {
+        "tp": 1333,
+        "fp": 2481,
+        "fn": 1593,
+        "tn": 23043
+      },
+      "event_metrics": {
+        "unit": "event (contiguous anomaly segments in test data)",
+        "total_events": 8,
+        "detected_events": 5,
+        "event_recall": 0.625,
+        "false_alarm_events": 44,
+        "mean_detection_delay": 265.0,
+        "point_adjusted": {
+          "description": "point-adjust (optimistic, for comparison with literature)",
+          "precision": 0.533,
+          "recall": 0.9679,
+          "f1": 0.6875
+        }
+      }
+    }
+  ],
+  "trivial_reference": {
+    "method": "Flag_Everything_Trivial",
+    "precision": 0.1028,
+    "recall": 1.0,
+    "f1": 0.1865,
+    "flagged_rate": 1.0,
+    "note": "Trivial reference that flags every single window"
+  }
 }

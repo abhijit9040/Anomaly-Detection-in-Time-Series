@@ -39,6 +39,12 @@ class ModelService:
         self.evaluation_metrics: dict = {}
         self.is_loaded: bool = False
         self._device = torch.device("cpu")
+        self.clip_value: float | None = 10.0
+        self.preprocessing_info: dict = {}
+        self.run_manifest: dict | None = None
+        self.per_sensor_val_p99: list[float] | None = None
+        self.error_normalization: str = "none"
+        self.ignored_sensors: list[int] = []
 
     def load(self, artifacts_dir: Path) -> bool:
         """
@@ -77,6 +83,22 @@ class ModelService:
                     "recall": eval_data.get("recall"),
                 }
 
+            # Load preprocessing metadata if present
+            prep_path = artifacts_dir / f"preprocessing_{self.machine_id}.json"
+            if prep_path.exists():
+                with open(prep_path) as f:
+                    self.preprocessing_info = json.load(f)
+                self.clip_value = self.preprocessing_info.get("clip_value")
+                self.per_sensor_val_p99 = self.preprocessing_info.get("per_sensor_val_p99")
+                self.error_normalization = self.preprocessing_info.get("error_normalization", "none")
+                self.ignored_sensors = self.preprocessing_info.get("ignored_sensors", [])
+
+            # Load run manifest if present
+            manifest_path = artifacts_dir / "run_manifest.json"
+            if manifest_path.exists():
+                with open(manifest_path) as f:
+                    self.run_manifest = json.load(f)
+
             # Load PyTorch model
             from app.services.lstm_loader import build_lstm_autoencoder
             self.model = build_lstm_autoencoder()
@@ -113,6 +135,8 @@ class ModelService:
 
         # Scale the input
         scaled = self.scaler.transform(window)
+        if self.clip_value is not None:
+            scaled = np.clip(scaled, -self.clip_value, self.clip_value)
 
         # Convert to tensor (1, window_size, n_features)
         x = torch.tensor(scaled, dtype=torch.float32).unsqueeze(0)
@@ -122,6 +146,16 @@ class ModelService:
 
         # MSE per timestep per feature -> mean over both
         error_tensor = (x - reconstruction) ** 2
+
+        # Optional Phase 6 error normalization
+        if self.error_normalization == "per_sensor_val_p99" and self.per_sensor_val_p99:
+            p99_tensor = torch.tensor(self.per_sensor_val_p99, dtype=torch.float32).view(1, 1, -1)
+            error_tensor = error_tensor / torch.clamp(p99_tensor, min=1e-4)
+
+        if self.ignored_sensors:
+            for idx in self.ignored_sensors:
+                error_tensor[:, :, idx] = 0.0
+
         # Per-sensor error: mean over timesteps
         per_sensor = error_tensor[0].mean(dim=0).cpu().numpy()
         total_error = float(per_sensor.mean())

@@ -7,14 +7,15 @@ CRITICAL: Per PRD §18 (Distinction Criteria) and §10:
 - The anomaly threshold is selected on the VALIDATION set.
 - The test set remains untouched until final evaluation.
 
-This module provides:
-1. StandardScaler / MinMaxScaler fitting (train only)
-2. Sliding window creation for LSTM input
-3. Train/validation splitting
+Phase 1 Additions:
+- std_floor: prevents near-constant sensors from producing astronomical z-scores.
+- clip_value: caps extreme outlier z-scores after scaling.
+- preprocessing_{machine_id}.json saved to artifacts.
 """
 
 from __future__ import annotations
 
+import json
 import logging
 from pathlib import Path
 
@@ -27,54 +28,56 @@ logger = logging.getLogger(__name__)
 def fit_scaler(
     train_data: np.ndarray,
     method: str = "standard",
-) -> StandardScaler | MinMaxScaler:
+    std_floor: float | None = 0.05,
+) -> tuple[StandardScaler | MinMaxScaler, list[int]]:
     """
-    Fit a scaler on TRAINING DATA ONLY.
-
-    This is the critical leakage-prevention step. The scaler
-    must never see validation or test data during fitting.
+    Fit a scaler on TRAINING DATA ONLY with optional std_floor.
 
     Args:
         train_data: Training data, shape (n_samples, n_features).
-        method: "standard" (zero mean, unit variance) or "minmax" (0-1 range).
+        method: "standard" or "minmax".
+        std_floor: Minimum scale allowed for features.
 
     Returns:
-        Fitted scaler object.
+        (fitted_scaler, floored_sensors_indices)
     """
+    floored_sensors: list[int] = []
     if method == "standard":
         scaler = StandardScaler()
+        scaler.fit(train_data)
+        if std_floor is not None and std_floor > 0:
+            floored_mask = scaler.scale_ < std_floor
+            floored_sensors = [int(i) for i in np.where(floored_mask)[0]]
+            scaler.scale_ = np.maximum(scaler.scale_, std_floor)
+            logger.info(
+                "Applied std_floor=%.4f: %d / %d sensors floored: %s",
+                std_floor,
+                len(floored_sensors),
+                len(scaler.scale_),
+                floored_sensors,
+            )
     elif method == "minmax":
         scaler = MinMaxScaler()
+        scaler.fit(train_data)
     else:
         raise ValueError(f"Unknown scaler method: {method}. Use 'standard' or 'minmax'.")
 
-    scaler.fit(train_data)
-    logger.info(
-        "Scaler fitted on training data: method=%s, shape=%s",
-        method,
-        train_data.shape,
-    )
-    return scaler
+    logger.info("Scaler fitted on training data: method=%s, shape=%s", method, train_data.shape)
+    return scaler, floored_sensors
 
 
 def transform_data(
     data: np.ndarray,
     scaler: StandardScaler | MinMaxScaler,
+    clip_value: float | None = 10.0,
 ) -> np.ndarray:
     """
-    Transform data using a PRE-FITTED scaler.
-
-    The scaler was fitted on training data only. This function
-    applies the same transformation to any split (train, val, test).
-
-    Args:
-        data: Data to transform, shape (n_samples, n_features).
-        scaler: Pre-fitted scaler from fit_scaler().
-
-    Returns:
-        Transformed data with same shape.
+    Transform data using a PRE-FITTED scaler with optional z-score clipping.
     """
-    return scaler.transform(data)
+    scaled = scaler.transform(data)
+    if clip_value is not None:
+        scaled = np.clip(scaled, -clip_value, clip_value)
+    return scaled
 
 
 def create_windows(
@@ -85,25 +88,6 @@ def create_windows(
 ) -> tuple[np.ndarray, np.ndarray | None]:
     """
     Create sliding windows for LSTM input.
-
-    The LSTM autoencoder expects input of shape:
-        (batch_size, window_size, num_features)
-
-    This function slides a window across the time series to
-    generate training/inference samples.
-
-    Args:
-        data: Time-series data, shape (n_timesteps, n_features).
-        window_size: Number of timesteps per window.
-        step_size: Stride between consecutive windows.
-        labels: Optional labels, shape (n_timesteps,). If provided,
-                a window is labeled anomalous if ANY timestep in the
-                window is anomalous (conservative approach).
-
-    Returns:
-        Tuple of:
-            - windows: np.ndarray, shape (n_windows, window_size, n_features)
-            - window_labels: np.ndarray or None, shape (n_windows,)
     """
     n_timesteps, n_features = data.shape
     n_windows = (n_timesteps - window_size) // step_size + 1
@@ -139,7 +123,12 @@ def create_windows(
 
     if window_labels is not None:
         anomaly_ratio = window_labels.sum() / len(window_labels)
-        logger.info("Window anomaly ratio: %.3f (%d / %d)", anomaly_ratio, window_labels.sum(), len(window_labels))
+        logger.info(
+            "Window anomaly ratio: %.3f (%d / %d)",
+            anomaly_ratio,
+            window_labels.sum(),
+            len(window_labels),
+        )
 
     return windows, window_labels
 
@@ -150,18 +139,7 @@ def split_train_val(
     seed: int = 42,
 ) -> tuple[np.ndarray, np.ndarray]:
     """
-    Split training data into train and validation sets.
-
-    For time-series data, we use a TEMPORAL split (not random)
-    to respect temporal ordering and avoid look-ahead bias.
-
-    Args:
-        train_data: Training data, shape (n_samples, n_features).
-        val_split: Fraction of data to use for validation.
-        seed: Not used for temporal split, but included for API consistency.
-
-    Returns:
-        Tuple of (train_split, val_split), both np.ndarray.
+    Split training data into train and validation sets (TEMPORAL split).
     """
     n = len(train_data)
     split_idx = int(n * (1 - val_split))
@@ -187,53 +165,43 @@ def preprocess_pipeline(
     step_size: int = 1,
     val_split: float = 0.2,
     scaler_method: str = "standard",
+    std_floor: float | None = 0.05,
+    clip_value: float | None = 10.0,
     seed: int = 42,
+    machine_id: str = "machine-1-1",
+    artifacts_dir: str | Path | None = None,
 ) -> dict:
     """
-    Full preprocessing pipeline: normalize → split → window.
-
-    This is the main entry point for data preparation.
-    Ensures leakage-free processing per PRD requirements.
-
-    Pipeline:
-        1. Split raw train into train/val (temporal split)
-        2. Fit scaler on TRAIN SPLIT ONLY
-        3. Transform train, val, and test using fitted scaler
-        4. Create sliding windows for all splits
-
-    Args:
-        train_raw: Raw training data, shape (n_train, n_features).
-        test_raw: Raw test data, shape (n_test, n_features).
-        test_labels: Test labels, shape (n_test,).
-        window_size: Sliding window size.
-        step_size: Sliding window stride.
-        val_split: Fraction for validation.
-        scaler_method: "standard" or "minmax".
-        seed: Random seed.
-
-    Returns:
-        Dictionary with:
-            - "train_windows": np.ndarray
-            - "val_windows": np.ndarray
-            - "test_windows": np.ndarray
-            - "test_window_labels": np.ndarray
-            - "scaler": fitted scaler object
-            - "config": dict of preprocessing parameters
+    Full preprocessing pipeline: normalize (with std_floor & clipping) -> split -> window.
     """
     logger.info("=" * 50)
-    logger.info("Starting preprocessing pipeline")
+    logger.info("Starting preprocessing pipeline (std_floor=%s, clip=%s)", std_floor, clip_value)
     logger.info("=" * 50)
 
     # Step 1: Temporal train/val split
     train_split, val_split_data = split_train_val(train_raw, val_split, seed)
 
-    # Step 2: Fit scaler on TRAINING DATA ONLY (leakage-safe)
-    scaler = fit_scaler(train_split, method=scaler_method)
+    # Step 2: Fit scaler on TRAINING DATA ONLY (with std_floor)
+    scaler, floored_sensors = fit_scaler(train_split, method=scaler_method, std_floor=std_floor)
+
+    # Evaluate clipping statistics before/after on test set
+    raw_test_scaled = scaler.transform(test_raw)
+    test_clipped_count = 0
+    test_max_unclipped_zscore = float(np.abs(raw_test_scaled).max())
+    if clip_value is not None:
+        test_clipped_count = int((np.abs(raw_test_scaled) > clip_value).sum())
+        logger.info(
+            "Test clipping stats: max raw |z|=%.2f, elements with |z| > %.1f: %d (%.2f%%)",
+            test_max_unclipped_zscore,
+            clip_value,
+            test_clipped_count,
+            (test_clipped_count / raw_test_scaled.size) * 100,
+        )
 
     # Step 3: Transform all splits
-    train_scaled = transform_data(train_split, scaler)
-    val_scaled = transform_data(val_split_data, scaler)
-    test_scaled = transform_data(test_raw, scaler)
+    train_scaled = transform_data(train_split, scaler, clip_value=clip_value)
+    val_scaled = transform_data(val_split_data, scaler, clip_value=clip_value)
+    test_scaled = transform_data(test_raw, scaler, clip_value=clip_value)
 
     # Step 4: Create sliding windows
     train_windows, _ = create_windows(train_scaled, window_size, step_size)
@@ -241,6 +209,28 @@ def preprocess_pipeline(
     test_windows, test_window_labels = create_windows(
         test_scaled, window_size, step_size, labels=test_labels
     )
+
+    preprocessing_info = {
+        "machine_id": machine_id,
+        "std_floor": float(std_floor) if std_floor is not None else None,
+        "clip_value": float(clip_value) if clip_value is not None else None,
+        "window_size": int(window_size),
+        "step_size": int(step_size),
+        "val_split": float(val_split),
+        "scaler_method": scaler_method,
+        "floored_sensors": floored_sensors,
+        "n_floored_sensors": len(floored_sensors),
+        "test_clipped_values_count": test_clipped_count,
+        "test_max_unclipped_zscore": test_max_unclipped_zscore,
+    }
+
+    if artifacts_dir is not None:
+        artifacts_path = Path(artifacts_dir)
+        artifacts_path.mkdir(parents=True, exist_ok=True)
+        out_file = artifacts_path / f"preprocessing_{machine_id}.json"
+        with open(out_file, "w", encoding="utf-8") as f:
+            json.dump(preprocessing_info, f, indent=2)
+        logger.info("Saved preprocessing metadata to %s", out_file)
 
     logger.info("Preprocessing complete:")
     logger.info("  Train windows: %s", train_windows.shape)
@@ -253,11 +243,14 @@ def preprocess_pipeline(
         "test_windows": test_windows,
         "test_window_labels": test_window_labels,
         "scaler": scaler,
+        "preprocessing_info": preprocessing_info,
         "config": {
             "window_size": window_size,
             "step_size": step_size,
             "val_split": val_split,
             "scaler_method": scaler_method,
+            "std_floor": std_floor,
+            "clip_value": clip_value,
             "seed": seed,
             "n_train": len(train_split),
             "n_val": len(val_split_data),

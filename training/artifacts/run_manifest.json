@@ -1,0 +1,17 @@
+{
+  "machine_id": "machine-1-1",
+  "git_commit": "02964f93f5ef8cf909a87e796722234905769c85",
+  "config_hash": "afc5b7a798777e34334ba7476e70f95e608c04f92ce19b673631ac52d58242ca",
+  "seed": 42,
+  "timestamp_utc": "2026-11-24T08:36:42.396898+00:00",
+  "best_epoch": 49,
+  "best_val_loss": 0.055873,
+  "final_train_loss": 0.04023,
+  "final_val_loss": 0.055983,
+  "files": {
+    "weights": "lstm_autoencoder_machine-1-1.pt",
+    "scaler": "scaler_machine-1-1.pkl",
+    "preprocessing": "preprocessing_machine-1-1.json",
+    "results": "evaluation_results.json"
+  }
+}

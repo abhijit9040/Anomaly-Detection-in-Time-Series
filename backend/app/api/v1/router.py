@@ -204,6 +204,7 @@ async def get_model_metadata():
         threshold=round(model_service.threshold, 6),
         threshold_method=model_service.threshold_strategy,
         evaluation_metrics=model_service.evaluation_metrics,
+        run_manifest=model_service.run_manifest,
     )
 
 
@@ -238,20 +239,41 @@ async def get_evaluation_report():
         with open(baseline_path) as f:
             baseline = json.load(f)
 
+    # Legacy fallback calculation if improvements dictionary not present
+    improvement = lstm_results.get("improvements", {})
+    if not improvement:
+        f1_delta = round(
+            lstm_results.get("f1", 0) - (baseline.get("f1", 0) if baseline else 0), 4
+        )
+        improvement = {
+            "f1_delta": f1_delta,
+            "f1_improvement_pct": round(
+                f1_delta / max(baseline.get("f1", 0.001) if baseline else 0.001, 0.001) * 100,
+                1,
+            ),
+        }
+
     return {
         "lstm_autoencoder": lstm_results,
         "baseline": baseline,
-        "improvement": {
-            "f1_delta": round(
-                lstm_results.get("f1", 0) - (baseline.get("f1", 0) if baseline else 0), 4
-            ),
-            "f1_improvement_pct": round(
-                (lstm_results.get("f1", 0) - (baseline.get("f1", 0) if baseline else 0))
-                / max(baseline.get("f1", 0.001) if baseline else 0.001, 0.001)
-                * 100,
-                1,
-            ),
-        },
+        "improvement": improvement,
+        "f1": lstm_results.get("f1"),
+        "precision": lstm_results.get("precision"),
+        "recall": lstm_results.get("recall"),
+        "auc_roc": lstm_results.get("auc_roc"),
+        "auc_pr": lstm_results.get("auc_pr"),
+        "threshold": lstm_results.get("threshold"),
+        "threshold_strategy": lstm_results.get("threshold_strategy"),
+        "flagged_rate": lstm_results.get("flagged_rate"),
+        "anomaly_rate": lstm_results.get("anomaly_rate"),
+        "confusion_matrix": lstm_results.get("confusion_matrix"),
+        "event_metrics": lstm_results.get("event_metrics"),
+        "sensitivity_table": lstm_results.get("sensitivity_table"),
+        "oracle_diagnostic": lstm_results.get("oracle_diagnostic"),
+        "temporal_calibration": lstm_results.get("temporal_calibration"),
+        "unit": lstm_results.get("unit"),
+        "trivial_reference": lstm_results.get("trivial_reference"),
+        "best_baseline": lstm_results.get("best_baseline"),
     }
 
 

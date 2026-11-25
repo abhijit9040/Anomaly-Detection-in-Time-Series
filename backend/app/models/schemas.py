@@ -92,6 +92,7 @@ class ModelMetadataResponse(BaseModel):
     threshold: float | None = None
     threshold_method: str | None = None
     evaluation_metrics: dict | None = None
+    run_manifest: dict | None = None
 
 
 # ═══════════════════════════════════════════════

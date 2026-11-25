@@ -7,7 +7,7 @@
 
 import { useState, useEffect, useRef, useCallback } from 'react';
 import Plot from 'react-plotly.js';
-import { getStreamData, checkHealth } from '../services/api';
+import { getStreamData, checkHealth, getModelMetadata } from '../services/api';
 
 const MAX_POINTS = 150;
 
@@ -33,11 +33,21 @@ export default function SensorsPage() {
   const [latestErrors, setLatestErrors] = useState([]); // per-sensor error
   const [latestAnomalies, setLatestAnomalies] = useState(0);
   const [health, setHealth] = useState(null);
+  const [sensorThreshold, setSensorThreshold] = useState(0.5);
 
   const streamRef = useRef(null);
 
   useEffect(() => {
     checkHealth().then(r => setHealth(r.data)).catch(() => {});
+    // Dynamically derive sensor cutoff from API model metadata.
+    // In unnormalized mode, per-sensor MSE contributions are evaluated relative to the calibrated window threshold.
+    getModelMetadata()
+      .then(res => {
+        if (res.data?.threshold) {
+          setSensorThreshold(res.data.threshold);
+        }
+      })
+      .catch(() => {});
   }, []);
 
   const fetchPoint = useCallback(async () => {
@@ -168,7 +178,8 @@ export default function SensorsPage() {
             const values = sensorValues[idx] || [];
             const lastVal = values.length > 0 ? values[values.length - 1] : 0;
             const errObj = latestErrors.find(e => e.sensor_index === idx);
-            const isElevated = errObj && errObj.reconstruction_error > 0.8;
+            // Sensor flagged elevated if error exceeds dynamically derived threshold
+            const isElevated = errObj && errObj.reconstruction_error > sensorThreshold;
 
             return (
               <div
@@ -265,7 +276,7 @@ export default function SensorsPage() {
                     type: 'bar',
                     orientation: 'h',
                     marker: {
-                      color: sortedErrors.map(e => e.reconstruction_error > 0.8 ? '#ef4444' : '#6366f1'),
+                      color: sortedErrors.map(e => e.reconstruction_error > sensorThreshold ? '#ef4444' : '#6366f1'),
                     },
                   },
                 ]}
