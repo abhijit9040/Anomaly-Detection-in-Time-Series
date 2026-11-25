@@ -85,6 +85,7 @@ class ModelMetadataResponse(BaseModel):
 
     model_version: str
     model_type: str = "LSTM Autoencoder"
+    n_features: int = 38
     training_date: str | None = None
     dataset_name: str | None = None
     dataset_version: str | None = None

@@ -82,6 +82,8 @@ async def test_api_model_metadata_returns_run_manifest():
         assert "threshold_method" in data
         assert "run_manifest" in data
         assert "model_version" in data
+        assert "n_features" in data
+        assert data["n_features"] == 38
     finally:
         if not was_loaded:
             model_service.is_loaded = False

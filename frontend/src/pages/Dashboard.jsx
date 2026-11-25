@@ -34,6 +34,8 @@ export default function Dashboard() {
   // Batch inference state (FR-012)
   const [batchResults, setBatchResults] = useState(null);
   const [batchLoading, setBatchLoading] = useState(false);
+  const [meta, setMeta] = useState(null);
+  const [lastStreamPoint, setLastStreamPoint] = useState(null);
 
   const threshold = useRef(0.5); // Dynamically updated from model metadata on mount
   const streamRef = useRef(null);
@@ -53,6 +55,7 @@ export default function Dashboard() {
     poll();
     getModelMetadata()
       .then(res => {
+        setMeta(res.data);
         if (res.data?.threshold) {
           threshold.current = res.data.threshold;
         }
@@ -66,6 +69,7 @@ export default function Dashboard() {
     try {
       const res = await getStreamData();
       const d = res.data;
+      setLastStreamPoint(d);
       const now = new Date().toLocaleTimeString();
 
       setTimestamps(prev => [...prev.slice(-MAX_POINTS), now]);
@@ -325,8 +329,8 @@ export default function Dashboard() {
         <div className="metrics-grid">
           <div className="metric-card">
             <div className="metric-label">Active Sensors</div>
-            <div className="metric-value">38</div>
-            <div className="metric-change metric-change--up">● All channels active</div>
+            <div className="metric-value">{meta?.n_features || lastStreamPoint?.sensor_values?.length || 'n/a'}</div>
+            <div className="metric-change metric-change--up">● channels monitored</div>
           </div>
           <div className="metric-card">
             <div className="metric-label">Anomalies Detected</div>

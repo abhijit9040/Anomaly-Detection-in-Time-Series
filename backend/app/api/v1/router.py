@@ -186,9 +186,17 @@ async def get_model_metadata():
     """FR-006: Returns model version, hyperparameters, and evaluation metrics."""
     _require_model()
 
+    n_feat = 38
+    if model_service.is_loaded:
+        if model_service.scaler is not None and hasattr(model_service.scaler, "n_features_in_"):
+            n_feat = int(model_service.scaler.n_features_in_)
+        elif hasattr(model_service, "n_features"):
+            n_feat = int(model_service.n_features)
+
     return ModelMetadataResponse(
         model_version=model_service.model_version,
         model_type="LSTM Autoencoder",
+        n_features=n_feat,
         training_date=model_service.training_date,
         dataset_name="Server Machine Dataset (SMD)",
         dataset_version="1.0",
