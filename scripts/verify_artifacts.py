@@ -54,6 +54,9 @@ def verify_artifacts() -> bool:
     with open(manifest_file, "r", encoding="utf-8") as f:
         stored_manifest = json.load(f)
 
+    if stored_manifest.get("git_dirty"):
+        logger.warning("run_manifest.json reports git_dirty=True (uncommitted changes at training time)")
+
     machine_id = stored_eval.get("machine_id", "machine-1-1")
     model_path = artifacts_dir / f"lstm_autoencoder_{machine_id}.pt"
     prep_path = artifacts_dir / f"preprocessing_{machine_id}.json"

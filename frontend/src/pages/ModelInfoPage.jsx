@@ -46,6 +46,7 @@ export default function ModelInfoPage() {
 
   const hp = meta?.hyperparameters || {};
   const em = meta?.evaluation_metrics || {};
+  const rm = meta?.run_manifest || {};
 
   return (
     <>
@@ -125,6 +126,21 @@ export default function ModelInfoPage() {
               <div>  Linear(64 → 38)</div>
               <div>  Output: (batch, 30, 38)</div>
               <div style={{ marginTop: '12px', color: '#f59e0b' }}>Loss: MSE Reconstruction Error</div>
+            </div>
+          </div>
+
+          {/* Training Provenance */}
+          <div className="card">
+            <div className="card-header">
+              <div className="card-title">Training Provenance &amp; Reproducibility</div>
+            </div>
+            <div style={{ padding: '0 20px 20px' }}>
+              <InfoRow label="Git Commit (Base)" value={rm.git_commit ? rm.git_commit.slice(0, 10) : '—'} />
+              <InfoRow label="Working Tree Dirty" value={rm.git_dirty ? 'Yes (uncommitted at run)' : 'No (clean)'} />
+              <InfoRow label="Commit Semantics" value={rm.git_commit_semantics || '—'} />
+              <InfoRow label="Code Committed In" value={rm.code_committed_in || '—'} />
+              {rm.seed !== undefined && <InfoRow label="Random Seed" value={String(rm.seed)} />}
+              {rm.loss?.best_epoch !== undefined && <InfoRow label="Best Epoch" value={String(rm.loss.best_epoch)} />}
             </div>
           </div>
 
