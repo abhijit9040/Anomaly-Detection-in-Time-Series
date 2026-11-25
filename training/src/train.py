@@ -141,6 +141,9 @@ def train_model():
     # 4. Training Loop with Early Stopping
     logger.info(f"Starting training for up to {config.training.epochs} epochs...")
     best_val_loss = float('inf')
+    best_epoch = 1
+    final_train_loss = 0.0
+    final_val_loss = 0.0
     patience_counter = 0
     
     artifacts_dir = Path(__file__).parent.parent / "artifacts"
@@ -151,12 +154,15 @@ def train_model():
     for epoch in range(1, config.training.epochs + 1):
         train_loss = train_epoch(model, train_loader, criterion, optimizer, device)
         val_loss = validate_epoch(model, val_loader, criterion, device)
+        final_train_loss = float(train_loss)
+        final_val_loss = float(val_loss)
         
         logger.info(f"Epoch {epoch:03d}/{config.training.epochs} | Train Loss: {train_loss:.6f} | Val Loss: {val_loss:.6f}")
         
         # Early Stopping Check
         if val_loss < best_val_loss:
-            best_val_loss = val_loss
+            best_val_loss = float(val_loss)
+            best_epoch = epoch
             patience_counter = 0
             # Save the best model
             torch.save(model.state_dict(), model_save_path)
@@ -169,9 +175,56 @@ def train_model():
                 
     # Save the scaler so the backend can use it for inference later
     import pickle
+    import subprocess
+    import hashlib
+    from datetime import datetime, timezone
+    import json
+
     with open(scaler_save_path, "wb") as f:
         pickle.dump(prep_result["scaler"], f)
     logger.info(f"Saved fitted scaler to {scaler_save_path}")
+
+    # Record git metadata and write run manifest (for future runs)
+    git_hash = "unknown"
+    git_dirty = False
+    try:
+        git_hash = subprocess.check_output(
+            ["git", "rev-parse", "HEAD"], stderr=subprocess.DEVNULL
+        ).decode("utf-8").strip()
+        status_out = subprocess.check_output(
+            ["git", "status", "--porcelain"], stderr=subprocess.DEVNULL
+        ).decode("utf-8").strip()
+        git_dirty = bool(status_out)
+    except Exception:
+        pass
+
+    config_path = Path(__file__).parent.parent / "configs" / "default.yaml"
+    config_hash = "unknown"
+    if config_path.exists():
+        config_hash = hashlib.sha256(config_path.read_bytes()).hexdigest()
+
+    manifest = {
+        "machine_id": machine_id,
+        "git_commit": git_hash,
+        "git_dirty": git_dirty,
+        "config_hash": config_hash,
+        "seed": config.training.seed,
+        "timestamp_utc": datetime.now(timezone.utc).isoformat(),
+        "best_epoch": best_epoch,
+        "best_val_loss": round(float(best_val_loss), 6),
+        "final_train_loss": round(float(final_train_loss), 6),
+        "final_val_loss": round(float(final_val_loss), 6),
+        "files": {
+            "weights": f"lstm_autoencoder_{machine_id}.pt",
+            "scaler": f"scaler_{machine_id}.pkl",
+            "preprocessing": f"preprocessing_{machine_id}.json",
+            "results": "evaluation_results.json",
+        },
+    }
+    manifest_path = artifacts_dir / "run_manifest.json"
+    with open(manifest_path, "w", encoding="utf-8") as f:
+        json.dump(manifest, f, indent=2)
+    logger.info(f"Saved run manifest to {manifest_path}")
     logger.info("Training complete.")
 
 

@@ -9,12 +9,16 @@ import logging
 from datetime import datetime, timezone
 from pathlib import Path
 
+import numpy as np
+
 from fastapi import APIRouter, HTTPException, status
 
 from app.models.schemas import (
     AnomalyDetectionResponse,
     BatchDetectionRequest,
     BatchDetectionResponse,
+    DemoWindowItem,
+    DemoWindowsResponse,
     ErrorResponse,
     LoginRequest,
     ModelMetadataResponse,
@@ -174,6 +178,71 @@ async def detect_batch(batch: BatchDetectionRequest):
 
 
 # ═══════════════════════════════════════════════
+# GET /api/v1/demo/windows — Real test windows for batch demo
+# ═══════════════════════════════════════════════
+@router.get(
+    "/demo/windows",
+    response_model=DemoWindowsResponse,
+    summary="Get real test windows (normal and anomaly) for batch demonstration",
+)
+async def get_demo_windows(count: int = 10):
+    """
+    Returns real windows from the SMD test dataset (5 normal windows from index 0-150,
+    5 anomaly windows from first failure segment starting at timestep 15,849).
+    Deterministic, no randomness.
+    """
+    project_root = Path(__file__).parent.parent.parent.parent.parent
+    if stream_service.test_data is None:
+        data_dir = project_root / "data" / "raw"
+        stream_service.load(data_dir, machine_id=model_service.machine_id or "machine-1-1")
+
+    if stream_service.test_data is None:
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail={"error": "stream_unavailable", "message": "Test data not loaded."},
+        )
+
+    n_normal = count // 2
+    n_anomaly = count - n_normal
+
+    # 5 normal windows from index 0 to 150
+    normal_starts = [0, 25, 50, 75, 100]
+    if n_normal != 5:
+        normal_starts = [int(i * (120 / max(1, n_normal - 1))) for i in range(n_normal)]
+
+    # 5 anomaly windows starting at first_anomaly_index (15849)
+    ano_start = stream_service.first_anomaly_index
+    anomaly_starts = [ano_start, ano_start + 11, ano_start + 26, ano_start + 41, ano_start + 61]
+    if n_anomaly != 5:
+        anomaly_starts = [ano_start + int(i * 15) for i in range(n_anomaly)]
+
+    selected_starts = [(s, 0) for s in normal_starts] + [(s, 1) for s in anomaly_starts]
+    windows = []
+
+    for idx, (start_idx, default_label) in enumerate(selected_starts):
+        end_idx = start_idx + 30
+        window_arr = stream_service.test_data[start_idx:end_idx]
+        gt_label = default_label
+        if stream_service.test_labels is not None and len(stream_service.test_labels) >= end_idx:
+            gt_label = int(np.any(stream_service.test_labels[start_idx:end_idx] == 1))
+
+        windows.append(
+            DemoWindowItem(
+                window_index=idx,
+                data=window_arr.tolist(),
+                ground_truth_label=gt_label,
+                start_timestep=start_idx,
+                end_timestep=end_idx,
+            )
+        )
+
+    return DemoWindowsResponse(
+        total_windows=len(windows),
+        windows=windows,
+    )
+
+
+# ═══════════════════════════════════════════════
 # GET /api/v1/model — FR-006
 # ═══════════════════════════════════════════════
 @router.get(
@@ -186,9 +255,17 @@ async def get_model_metadata():
     """FR-006: Returns model version, hyperparameters, and evaluation metrics."""
     _require_model()
 
+    n_feat = 38
+    if model_service.is_loaded:
+        if model_service.scaler is not None and hasattr(model_service.scaler, "n_features_in_"):
+            n_feat = int(model_service.scaler.n_features_in_)
+        elif hasattr(model_service, "n_features"):
+            n_feat = int(model_service.n_features)
+
     return ModelMetadataResponse(
         model_version=model_service.model_version,
         model_type="LSTM Autoencoder",
+        n_features=n_feat,
         training_date=model_service.training_date,
         dataset_name="Server Machine Dataset (SMD)",
         dataset_version="1.0",

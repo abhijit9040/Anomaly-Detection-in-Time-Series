@@ -33,6 +33,7 @@ export default function SensorsPage() {
   const [latestErrors, setLatestErrors] = useState([]); // per-sensor error
   const [latestAnomalies, setLatestAnomalies] = useState(0);
   const [health, setHealth] = useState(null);
+  const [meta, setMeta] = useState(null);
   const [sensorThreshold, setSensorThreshold] = useState(0.5);
 
   const streamRef = useRef(null);
@@ -43,6 +44,7 @@ export default function SensorsPage() {
     // In unnormalized mode, per-sensor MSE contributions are evaluated relative to the calibrated window threshold.
     getModelMetadata()
       .then(res => {
+        setMeta(res.data);
         if (res.data?.threshold) {
           setSensorThreshold(res.data.threshold);
         }
@@ -121,7 +123,7 @@ export default function SensorsPage() {
       <header className="page-header">
         <div>
           <h1 className="page-title">Sensor Streams & Root Cause Analysis</h1>
-          <p className="page-subtitle">Multi-channel IoT telemetry (38 SMD sensor channels)</p>
+          <p className="page-subtitle">Multi-channel IoT telemetry ({meta?.n_features || 38} SMD sensor channels)</p>
         </div>
         <div style={{ display: 'flex', gap: '10px', alignItems: 'center' }}>
           <button

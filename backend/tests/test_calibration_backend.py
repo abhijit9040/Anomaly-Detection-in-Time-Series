@@ -82,6 +82,8 @@ async def test_api_model_metadata_returns_run_manifest():
         assert "threshold_method" in data
         assert "run_manifest" in data
         assert "model_version" in data
+        assert "n_features" in data
+        assert data["n_features"] == 38
     finally:
         if not was_loaded:
             model_service.is_loaded = False
@@ -113,3 +115,32 @@ async def test_api_evaluation_returns_enriched_metrics():
         assert "event_recall" in em
         assert "false_alarm_events" in em
         assert "mean_detection_delay" in em
+
+
+@pytest.mark.asyncio
+async def test_api_demo_windows_returns_real_windows():
+    """GET /api/v1/demo/windows returns 10 real windows with labels and timesteps."""
+    transport = ASGITransport(app=app)
+    async with AsyncClient(transport=transport, base_url="http://test") as client:
+        res = await client.get("/api/v1/demo/windows?count=10")
+    assert res.status_code == 200
+    data = res.json()
+    assert data["total_windows"] == 10
+    windows = data["windows"]
+    assert len(windows) == 10
+
+    # First 5 are normal (label 0, start_timestep < 150)
+    for i in range(5):
+        w = windows[i]
+        assert w["ground_truth_label"] == 0
+        assert len(w["data"]) == 30
+        assert len(w["data"][0]) == 38
+        assert w["start_timestep"] < 150
+
+    # Last 5 are anomaly (label 1, start_timestep >= 15849)
+    for i in range(5, 10):
+        w = windows[i]
+        assert w["ground_truth_label"] == 1
+        assert len(w["data"]) == 30
+        assert len(w["data"][0]) == 38
+        assert w["start_timestep"] >= 15849

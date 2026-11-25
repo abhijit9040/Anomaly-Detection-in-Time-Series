@@ -36,6 +36,7 @@ class ModelService:
         self.model_version: str = "1.0.0"
         self.training_date: str = ""
         self.machine_id: str = ""
+        self.n_features: int = 38
         self.evaluation_metrics: dict = {}
         self.is_loaded: bool = False
         self._device = torch.device("cpu")
@@ -69,6 +70,8 @@ class ModelService:
 
             with open(scaler_path, "rb") as f:
                 self.scaler = pickle.load(f)
+            if hasattr(self.scaler, "n_features_in_"):
+                self.n_features = int(self.scaler.n_features_in_)
 
             # Load evaluation results for threshold + metrics
             eval_path = artifacts_dir / "evaluation_results.json"

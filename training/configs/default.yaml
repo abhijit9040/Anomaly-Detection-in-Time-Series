@@ -26,7 +26,6 @@ preprocessing:
 model:
   type: "lstm_autoencoder"
   hidden_size: 64               # LSTM hidden state dimension
-  latent_size: 32               # Bottleneck / latent dimension
   num_layers: 2                 # Number of LSTM layers
   dropout: 0.1                  # Dropout rate between LSTM layers
   error_normalization: "none"   # "none" or "per_sensor_val_p99" (Phase 6)
