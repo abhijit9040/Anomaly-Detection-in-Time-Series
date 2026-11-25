@@ -115,7 +115,7 @@ Evaluated on held-out test data from the **Server Machine Dataset (machine-1-1, 
 
 | Method | Evaluation Unit | Threshold Strategy | Threshold Value | Flagged Rate | Precision | Recall | F1 Score | AUROC | AUPRC | Event Recall | False Alarms |
 |:---|:---:|:---:|:---:|:---:|:---:|:---:|:---:|:---:|:---:|:---:|:---:|
-| **LSTM Autoencoder (Ours) ★** | Windows (W=30, S=1) | Val 99.0th Percentile | 0.1541 | 23.01% | 42.42% | 94.91% | **58.64%** | 0.9461 | 0.6125 | 8/8 (100.00%) | 94 |
+| **LSTM Autoencoder (Ours)** | Windows (W=30, S=1) | Val 99.0th Percentile | 0.1541 | 23.01% | 42.42% | 94.91% | **58.64%** | 0.9461 | 0.6125 | 8/8 (100.00%) | 94 |
 | **PCA Reconstruction** | Windows (W=30, S=1) | Val 99.0th Percentile | 0.2350 | 9.80% | 60.90% | 58.03% | 59.43% | 0.9466 | 0.7174 | 8/8 (100.00%) | 42 |
 | **Isolation Forest** | Windows (W=30, S=1) | Val 99.0th Percentile | 0.6696 | 13.41% | 34.95% | 45.56% | 39.55% | 0.8615 | 0.3909 | 5/8 (62.50%) | 44 |
 | **Moving-Average Z-Score** | Windows (W=30, S=1) | Val 99.0th Percentile | 6.0551 | 55.26% | 18.41% | 98.94% | 31.05% | 0.8438 | 0.4877 | 8/8 (100.00%) | 16 |
@@ -129,7 +129,7 @@ Evaluated on held-out test data from the **Server Machine Dataset (machine-1-1, 
 | **Threshold Value** | 0.8281 | **0.1541** | Calibrated to normal variance |
 | **Flagged Rate** | 51.64% | **23.01%** | -28.63 pp (-55.4% false-alert reduction) |
 | **Precision** | 19.83% | **42.42%** | +22.59 pp (+114.0% relative gain) |
-| **Recall** | 99.56% | **94.91%** | -4.65 pp (slight drop to eliminate 55% false alarms) |
+| **Recall** | 99.56% | **94.91%** | Recall -4.65 pp; flagged rate -28.63 pp |
 | **F1 Score** | 33.07% | **58.64%** | +25.57 pp (+77.3% relative gain) |
 | **AUROC** | n/a | **0.9461** | Threshold-independent discriminative capacity |
 | **AUPRC** | n/a | **0.6125** | Precision-recall area on imbalanced test split |
@@ -140,7 +140,7 @@ Evaluated on held-out test data from the **Server Machine Dataset (machine-1-1, 
 
 1. **Improvement vs. Trivial Reference:** The LSTM Autoencoder achieves an F1 of 58.64%, which is a **+39.99 percentage point gain (+214.4% relative)** over the trivial Flag-Everything reference (18.65%).
 2. **Comparison vs. Best Fair Baseline (PCA Reconstruction):** The LSTM F1 is -0.79 percentage points (-1.33%) compared to PCA Reconstruction (59.43%).
-3. **Trade-off Profile:** The LSTM Autoencoder provides a decisive **recall advantage** (94.91% vs. 58.03% for PCA Reconstruction), capturing nearly all anomaly windows across time, whereas PCA Reconstruction achieves higher **precision** (60.90% vs. 42.42%) with fewer false alarms.
+3. **Trade-off Profile:** The LSTM Autoencoder yields higher **recall** (94.91% vs. 58.03% for PCA Reconstruction, +36.88 pp), whereas PCA Reconstruction yields higher **precision** (60.90% vs. 42.42%, +18.48 pp).
 4. **Oracle Diagnostic Bound:** The best possible theoretical test F1 is **61.94%** (at threshold `0.3066`, precision 53.20%, recall 74.13%). This is an *oracle / diagnostic bound only* that uses ground-truth test labels to select the threshold, and must never be used for deployment or headline claims.
 5. **Evaluation Unit:** All metrics are computed strictly on **sliding windows of size 30 with stride 1** ($W=30, S=1$). A window is labeled ground-truth positive if any timestep within it is labeled anomalous.
 

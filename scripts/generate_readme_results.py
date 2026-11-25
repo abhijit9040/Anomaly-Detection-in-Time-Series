@@ -92,7 +92,7 @@ def build_markdown_section(eval_data: dict, baseline_data: dict, before_data: di
     # Row 1: LSTM Autoencoder
     lstm_em = eval_data.get("event_metrics", {})
     lines.append(
-        f"| **LSTM Autoencoder (Ours) ★** | Windows (W=30, S=1) | {eval_data.get('threshold_strategy')} | "
+        f"| **LSTM Autoencoder (Ours)** | Windows (W=30, S=1) | {eval_data.get('threshold_strategy')} | "
         f"{format_num(eval_data.get('threshold'))} | {format_pct(eval_data.get('flagged_rate'))} | "
         f"{format_pct(eval_data.get('precision'))} | {format_pct(eval_data.get('recall'))} | "
         f"**{format_pct(eval_data.get('f1'))}** | {format_num(eval_data.get('auc_roc'))} | "
@@ -175,7 +175,7 @@ def build_markdown_section(eval_data: dict, baseline_data: dict, before_data: di
     before_r = before_data.get("recall", 0.995557)
     after_r = eval_data.get("recall", 0.9491)
     r_delta_pp = (after_r - before_r) * 100
-    lines.append(f"| **Recall** | {format_pct(before_r)} | **{format_pct(after_r)}** | {r_delta_pp:+.2f} pp (slight drop to eliminate 55% false alarms) |")
+    lines.append(f"| **Recall** | {format_pct(before_r)} | **{format_pct(after_r)}** | Recall {r_delta_pp:+.2f} pp; flagged rate {flagged_delta_pp:+.2f} pp |")
 
     before_f1 = before_data.get("f1", 0.330665)
     after_f1 = eval_data.get("f1", 0.5864)
@@ -222,7 +222,14 @@ def build_markdown_section(eval_data: dict, baseline_data: dict, before_data: di
     else:
         lines.append(f"2. **Comparison vs. Best Fair Baseline ({best_b_name}):** The LSTM outperforms {best_b_name} by {f1_vs_best_pp:+.2f} percentage points ({f1_vs_best_pct:+.2f}%).")
 
-    lines.append(f"3. **Trade-off Profile:** The LSTM Autoencoder provides a decisive **recall advantage** ({format_pct(lstm_r)} vs. {format_pct(best_b_r)} for {best_b_name}), capturing nearly all anomaly windows across time, whereas {best_b_name} achieves higher **precision** ({format_pct(best_b_p)} vs. {format_pct(lstm_p)}) with fewer false alarms.")
+    recall_delta_vs_best = (lstm_r - best_b_r) * 100
+    prec_delta_vs_best = (best_b_p - lstm_p) * 100
+    lines.append(
+        f"3. **Trade-off Profile:** The LSTM Autoencoder yields higher **recall** "
+        f"({format_pct(lstm_r)} vs. {format_pct(best_b_r)} for {best_b_name}, {recall_delta_vs_best:+.2f} pp), "
+        f"whereas {best_b_name} yields higher **precision** "
+        f"({format_pct(best_b_p)} vs. {format_pct(lstm_p)}, +{prec_delta_vs_best:.2f} pp)."
+    )
     lines.append(f"4. **Oracle Diagnostic Bound:** The best possible theoretical test F1 is **{format_pct(oracle_f1)}** (at threshold `{format_num(oracle_th)}`, precision {format_pct(oracle_p)}, recall {format_pct(oracle_r)}). This is an *oracle / diagnostic bound only* that uses ground-truth test labels to select the threshold, and must never be used for deployment or headline claims.")
     lines.append(f"5. **Evaluation Unit:** All metrics are computed strictly on **sliding windows of size 30 with stride 1** ($W=30, S=1$). A window is labeled ground-truth positive if any timestep within it is labeled anomalous.")
     lines.append("")

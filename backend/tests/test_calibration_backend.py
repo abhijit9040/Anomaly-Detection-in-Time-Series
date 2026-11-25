@@ -23,6 +23,7 @@ from httpx import ASGITransport, AsyncClient
 
 from app.main import app
 from app.services.model_service import model_service
+from app.services.stream_service import stream_service
 
 REPO_ROOT = Path(__file__).resolve().parent.parent.parent
 
@@ -81,6 +82,10 @@ async def test_api_model_metadata_returns_run_manifest():
         assert data["threshold"] > 0
         assert "threshold_method" in data
         assert "run_manifest" in data
+        assert data["run_manifest"] is not None
+        assert data["run_manifest"]["git_dirty"] is True
+        assert "git_commit_semantics" in data["run_manifest"]
+        assert "code_committed_in" in data["run_manifest"]
         assert "model_version" in data
         assert "n_features" in data
         assert data["n_features"] == 38
@@ -119,7 +124,7 @@ async def test_api_evaluation_returns_enriched_metrics():
 
 @pytest.mark.asyncio
 async def test_api_demo_windows_returns_real_windows():
-    """GET /api/v1/demo/windows returns 10 real windows with labels and timesteps."""
+    """GET /api/v1/demo/windows returns requested count of real windows with labels and timesteps."""
     transport = ASGITransport(app=app)
     async with AsyncClient(transport=transport, base_url="http://test") as client:
         res = await client.get("/api/v1/demo/windows?count=10")
@@ -144,3 +149,95 @@ async def test_api_demo_windows_returns_real_windows():
         assert len(w["data"]) == 30
         assert len(w["data"][0]) == 38
         assert w["start_timestep"] >= 15849
+
+
+@pytest.mark.asyncio
+async def test_api_model_metadata_returns_n_features():
+    """GET /api/v1/model returns n_features equal to model's input feature count (38 for machine-1-1)."""
+    was_loaded = model_service.is_loaded
+    if not was_loaded:
+        model_service.load(REPO_ROOT / "training" / "artifacts")
+    try:
+        transport = ASGITransport(app=app)
+        async with AsyncClient(transport=transport, base_url="http://test") as client:
+            res = await client.get("/api/v1/model")
+        assert res.status_code == 200
+        data = res.json()
+        assert "n_features" in data
+        assert data["n_features"] == 38
+        assert data["n_features"] == model_service.n_features
+    finally:
+        if not was_loaded:
+            model_service.is_loaded = False
+
+
+@pytest.mark.asyncio
+async def test_api_demo_windows_respects_count_and_shape():
+    """GET /api/v1/demo/windows respects arbitrary count parameter and returns 30x38 shape with 0/1 labels."""
+    transport = ASGITransport(app=app)
+    async with AsyncClient(transport=transport, base_url="http://test") as client:
+        for count in [2, 4, 7, 12]:
+            res = await client.get(f"/api/v1/demo/windows?count={count}")
+            assert res.status_code == 200
+            data = res.json()
+            assert data["total_windows"] == count
+            assert len(data["windows"]) == count
+            for w in data["windows"]:
+                assert len(w["data"]) == 30
+                assert len(w["data"][0]) == 38
+                assert w["ground_truth_label"] in (0, 1)
+
+
+@pytest.mark.asyncio
+async def test_api_demo_windows_deterministic_and_cursor_safe():
+    """Two identical calls return identical data; calling demo/windows does not advance stream cursor."""
+    if stream_service.test_data is None:
+        stream_service.load(REPO_ROOT / "data" / "raw")
+    transport = ASGITransport(app=app)
+    async with AsyncClient(transport=transport, base_url="http://test") as client:
+        # Step 1: Call stream to record current timestep
+        res_stream1 = await client.get("/api/v1/stream")
+        assert res_stream1.status_code == 200
+        step1 = res_stream1.json()["timestep"]
+
+        # Step 2: Call demo/windows twice with count=8
+        res_demo1 = await client.get("/api/v1/demo/windows?count=8")
+        res_demo2 = await client.get("/api/v1/demo/windows?count=8")
+        assert res_demo1.status_code == 200
+        assert res_demo2.status_code == 200
+        assert res_demo1.json() == res_demo2.json(), "Demo windows calls must be strictly deterministic"
+
+        # Step 3: Call stream again - timestep must be step1 + 1 (not advanced by demo windows)
+        res_stream2 = await client.get("/api/v1/stream")
+        assert res_stream2.status_code == 200
+        step2 = res_stream2.json()["timestep"]
+        assert step2 == step1 + 1, f"Stream cursor unexpectedly jumped from {step1} to {step2}"
+
+
+@pytest.mark.asyncio
+async def test_api_demo_windows_invalid_counts_validation():
+    """Invalid count values (0, negative, >100) return 422 Unprocessable Entity."""
+    transport = ASGITransport(app=app)
+    async with AsyncClient(transport=transport, base_url="http://test") as client:
+        for invalid_count in [0, -1, -10, 101, 1000]:
+            res = await client.get(f"/api/v1/demo/windows?count={invalid_count}")
+            assert res.status_code == 422, f"Expected 422 for count={invalid_count}, got {res.status_code}"
+
+
+@pytest.mark.asyncio
+async def test_api_demo_windows_labels_consistent_with_dataset():
+    """Ground-truth labels for demo windows must match any-anomaly-in-window definition from raw labels."""
+    if stream_service.test_data is None:
+        stream_service.load(REPO_ROOT / "data" / "raw")
+    transport = ASGITransport(app=app)
+    async with AsyncClient(transport=transport, base_url="http://test") as client:
+        res = await client.get("/api/v1/demo/windows?count=10")
+    assert res.status_code == 200
+    data = res.json()
+    for w in data["windows"]:
+        start = w["start_timestep"]
+        end = w["end_timestep"]
+        expected_label = int(np.any(stream_service.test_labels[start:end] == 1))
+        assert w["ground_truth_label"] == expected_label, (
+            f"Window {w['window_index']} label mismatch: got {w['ground_truth_label']}, expected {expected_label}"
+        )

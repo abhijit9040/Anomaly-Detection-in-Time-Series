@@ -11,7 +11,7 @@ from pathlib import Path
 
 import numpy as np
 
-from fastapi import APIRouter, HTTPException, status
+from fastapi import APIRouter, HTTPException, Query, status
 
 from app.models.schemas import (
     AnomalyDetectionResponse,
@@ -185,11 +185,22 @@ async def detect_batch(batch: BatchDetectionRequest):
     response_model=DemoWindowsResponse,
     summary="Get real test windows (normal and anomaly) for batch demonstration",
 )
-async def get_demo_windows(count: int = 10):
+async def get_demo_windows(
+    count: int = Query(
+        default=10,
+        ge=1,
+        le=100,
+        description="Number of real demo windows (between 1 and 100). Invalid counts return 422.",
+    )
+):
     """
-    Returns real windows from the SMD test dataset (5 normal windows from index 0-150,
-    5 anomaly windows from first failure segment starting at timestep 15,849).
-    Deterministic, no randomness.
+    Returns real windows from the SMD test dataset (split evenly between normal windows
+    from timesteps 0-150 and anomaly windows from the first failure segment starting at 15,849).
+    Deterministic, no randomness. Does not advance the stream replay cursor.
+
+    Query parameters:
+        count (int): Number of demo windows (1 <= count <= 100, default 10).
+                     Values outside [1, 100] return 422 Unprocessable Entity.
     """
     project_root = Path(__file__).parent.parent.parent.parent.parent
     if stream_service.test_data is None:

@@ -47,6 +47,7 @@ export default function ModelInfoPage() {
   const hp = meta?.hyperparameters || {};
   const em = meta?.evaluation_metrics || {};
   const rm = meta?.run_manifest || {};
+  const nFeat = meta?.n_features ?? 'n/a';
 
   return (
     <>
@@ -115,16 +116,16 @@ export default function ModelInfoPage() {
             </div>
             <div style={{ padding: '0 20px 20px', fontFamily: 'monospace', fontSize: '12px', color: 'var(--text-muted)', lineHeight: 1.8 }}>
               <div style={{ color: '#6366f1', fontWeight: 600, marginBottom: '8px' }}>Encoder</div>
-              <div>  Input: (batch, 30, 38)</div>
-              <div>  LSTM(in=38, hidden=64, layers=2)</div>
-              <div>  Output: hidden state (batch, 64)</div>
+              <div>  Input: (batch, {hp.window_size || 30}, {nFeat})</div>
+              <div>  LSTM(in={nFeat}, hidden={hp.hidden_dim || 64}, layers={hp.n_layers || 2})</div>
+              <div>  Output: hidden state (batch, {hp.hidden_dim || 64})</div>
               <div style={{ margin: '8px 0', color: '#94a3b8' }}>↓ bottleneck</div>
               <div style={{ color: '#10b981', fontWeight: 600, marginBottom: '8px' }}>Decoder</div>
-              <div>  Input: hidden state (batch, 64)</div>
-              <div>  Repeat × 30 → (batch, 30, 64)</div>
-              <div>  LSTM(in=64, hidden=64, layers=2)</div>
-              <div>  Linear(64 → 38)</div>
-              <div>  Output: (batch, 30, 38)</div>
+              <div>  Input: hidden state (batch, {hp.hidden_dim || 64})</div>
+              <div>  Repeat × {hp.window_size || 30} → (batch, {hp.window_size || 30}, {hp.hidden_dim || 64})</div>
+              <div>  LSTM(in={hp.hidden_dim || 64}, hidden={hp.hidden_dim || 64}, layers={hp.n_layers || 2})</div>
+              <div>  Linear({hp.hidden_dim || 64} → {nFeat})</div>
+              <div>  Output: (batch, {hp.window_size || 30}, {nFeat})</div>
               <div style={{ marginTop: '12px', color: '#f59e0b' }}>Loss: MSE Reconstruction Error</div>
             </div>
           </div>

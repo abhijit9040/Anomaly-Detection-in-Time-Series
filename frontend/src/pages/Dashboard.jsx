@@ -340,7 +340,7 @@ export default function Dashboard() {
         <div className="metrics-grid">
           <div className="metric-card">
             <div className="metric-label">Active Sensors</div>
-            <div className="metric-value">{meta?.n_features || lastStreamPoint?.sensor_values?.length || 'n/a'}</div>
+            <div className="metric-value">{meta?.n_features ?? lastStreamPoint?.sensor_values?.length ?? 'n/a'}</div>
             <div className="metric-change metric-change--up">● channels monitored</div>
           </div>
           <div className="metric-card">
