@@ -34,6 +34,7 @@ A production-grade, end-to-end anomaly detection system for multi-sensor IoT tim
 ┌───────────────────────────▼────────────────────────────┐
 │            PyTorch LSTM Autoencoder Pipeline           │
 │  - 2-layer LSTM Encoder (38 sensors → 64 hidden dim)   │
+│  - Bottleneck dimension = hidden_size = 64             │
 │  - 2-layer LSTM Decoder (64 hidden dim → 38 sensors)   │
 │  - Leakage-safe Standard Scaler (fit on train only)     │
 │  - Validation-set threshold: 99.0th percentile = 0.1541 │

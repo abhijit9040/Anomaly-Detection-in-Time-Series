@@ -38,7 +38,6 @@ class PreprocessingConfig:
 class ModelConfig:
     type: str = "lstm_autoencoder"
     hidden_size: int = 64
-    latent_size: int = 32
     num_layers: int = 2
     dropout: float = 0.1
     error_normalization: str = "none"
@@ -107,10 +106,18 @@ def load_config(config_path: str | Path = None) -> ExperimentConfig:
     with open(config_path, "r", encoding="utf-8") as f:
         raw = yaml.safe_load(f)
 
+    model_dict = dict(raw.get("model", {}))
+    if "latent_size" in model_dict:
+        import logging
+        logging.getLogger("config").warning(
+            "Deprecated config key 'latent_size' ignored; bottleneck dimension is hidden_size"
+        )
+        model_dict.pop("latent_size", None)
+
     config = ExperimentConfig(
         dataset=DatasetConfig(**raw.get("dataset", {})),
         preprocessing=PreprocessingConfig(**raw.get("preprocessing", {})),
-        model=ModelConfig(**raw.get("model", {})),
+        model=ModelConfig(**model_dict),
         training=TrainingConfig(**raw.get("training", {})),
         threshold=ThresholdConfig(**raw.get("threshold", {})),
         evaluation=EvaluationConfig(**raw.get("evaluation", {})),
