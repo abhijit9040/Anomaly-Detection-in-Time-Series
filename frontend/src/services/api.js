@@ -67,6 +67,13 @@ export const detectBatch = (windows) =>
   apiClient.post('/api/v1/detect/batch', { windows });
 
 /**
+ * Get real demo windows for batch demonstration
+ * @param {number} [count=10]
+ */
+export const getDemoWindows = (count = 10) =>
+  apiClient.get(`/api/v1/demo/windows?count=${count}`);
+
+/**
  * Get model metadata — FR-006
  */
 export const getModelMetadata = () => apiClient.get('/api/v1/model');

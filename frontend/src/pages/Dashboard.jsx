@@ -6,7 +6,7 @@
 
 import { useState, useEffect, useRef, useCallback } from 'react';
 import Plot from 'react-plotly.js';
-import { checkHealth, getStreamData, detectBatch, jumpToAnomaly, injectAnomaly, resetStream, getModelMetadata } from '../services/api';
+import { checkHealth, getStreamData, detectBatch, getDemoWindows, jumpToAnomaly, injectAnomaly, resetStream, getModelMetadata } from '../services/api';
 import { advanceAlertState, initialAlertState } from '../utils/alertEvents';
 
 const MAX_POINTS = 200;
@@ -157,22 +157,33 @@ export default function Dashboard() {
   const handleRunBatchSample = async () => {
     setBatchLoading(true);
     try {
-      // Create 10 synthetic test windows around current sensor readings
-      const windows = Array.from({ length: 10 }, (_, winIdx) => ({
-        data: Array.from({ length: 30 }, (__, tIdx) =>
-          Array.from({ length: 38 }, (___, sIdx) => {
-            // Introduce subtle deviations in windows 3 and 7
-            const base = (sIdx % 5) * 0.15;
-            const anomalyBonus = (winIdx === 3 || winIdx === 7) && sIdx < 4 ? 0.8 : 0.0;
-            return base + Math.sin(tIdx / 5) * 0.05 + anomalyBonus;
-          })
-        ),
+      // Fetch 10 real test windows (5 normal, 5 anomaly) from backend
+      const demoRes = await getDemoWindows(10);
+      const demoWindows = demoRes.data.windows;
+
+      const payload = demoWindows.map(w => ({ data: w.data }));
+      const res = await detectBatch(payload);
+
+      const resultsWithGt = res.data.results.map((r, idx) => ({
+        ...r,
+        ground_truth: demoWindows[idx]?.ground_truth_label ?? 0,
+        start_timestep: demoWindows[idx]?.start_timestep,
+        end_timestep: demoWindows[idx]?.end_timestep,
       }));
 
-      const res = await detectBatch(windows);
-      setBatchResults(res.data);
+      const trueAnomalyAgreement = resultsWithGt.filter(
+        r => r.ground_truth === 1 && r.is_anomaly
+      ).length;
+      const totalTrueAnomalies = resultsWithGt.filter(r => r.ground_truth === 1).length;
+
+      setBatchResults({
+        ...res.data,
+        results: resultsWithGt,
+        true_anomaly_agreement: trueAnomalyAgreement,
+        total_true_anomalies: totalTrueAnomalies,
+      });
     } catch (err) {
-      alert('Batch detection error: ' + (err.response?.data?.detail || err.message));
+      alert('Batch detection error: ' + (err.response?.data?.detail?.message || err.response?.data?.detail || err.message));
     } finally {
       setBatchLoading(false);
     }
@@ -486,8 +497,8 @@ export default function Dashboard() {
         <div className="card" style={{ marginBottom: '20px' }}>
           <div className="card-header">
             <div>
-              <div className="card-title">Batch Anomaly Detection (FR-012)</div>
-              <div className="card-subtitle">Execute multi-window batch inference via POST /api/v1/detect/batch</div>
+              <div className="card-title">Batch scoring on real test windows</div>
+              <div className="card-subtitle">Execute multi-window batch inference on real SMD test dataset via POST /api/v1/detect/batch</div>
             </div>
             <button
               onClick={handleRunBatchSample}
@@ -495,27 +506,29 @@ export default function Dashboard() {
               className="btn btn-primary"
               style={{ padding: '7px 16px', fontSize: '12px' }}
             >
-              {batchLoading ? 'Processing Batch…' : '⚡ Run Sample Batch (10 Windows)'}
+              {batchLoading ? 'Processing Real Windows…' : '⚡ Run Real Test Batch (10 Windows)'}
             </button>
           </div>
           {batchResults && (
             <div style={{ padding: '0 20px 20px' }}>
               <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '12px', marginBottom: '16px' }}>
                 <div style={{ background: 'rgba(255,255,255,0.03)', padding: '12px', borderRadius: '8px' }}>
-                  <div style={{ fontSize: '11px', color: 'var(--text-muted)' }}>Windows Analyzed</div>
+                  <div style={{ fontSize: '11px', color: 'var(--text-muted)' }}>Scored Windows</div>
                   <div style={{ fontSize: '18px', fontWeight: 700, color: 'var(--text-primary)' }}>{batchResults.total_windows}</div>
                 </div>
                 <div style={{ background: 'rgba(255,255,255,0.03)', padding: '12px', borderRadius: '8px' }}>
-                  <div style={{ fontSize: '11px', color: 'var(--text-muted)' }}>Anomalies Flagged</div>
+                  <div style={{ fontSize: '11px', color: 'var(--text-muted)' }}>Flagged Windows</div>
                   <div style={{ fontSize: '18px', fontWeight: 700, color: '#ef4444' }}>{batchResults.anomaly_count}</div>
                 </div>
                 <div style={{ background: 'rgba(255,255,255,0.03)', padding: '12px', borderRadius: '8px' }}>
-                  <div style={{ fontSize: '11px', color: 'var(--text-muted)' }}>Anomaly Rate</div>
-                  <div style={{ fontSize: '18px', fontWeight: 700, color: '#f59e0b' }}>{batchResults.anomaly_rate_pct}%</div>
+                  <div style={{ fontSize: '11px', color: 'var(--text-muted)' }}>True Anomaly Agreement</div>
+                  <div style={{ fontSize: '18px', fontWeight: 700, color: '#10b981' }}>
+                    {batchResults.true_anomaly_agreement ?? '—'} / {batchResults.total_true_anomalies ?? 5}
+                  </div>
                 </div>
                 <div style={{ background: 'rgba(255,255,255,0.03)', padding: '12px', borderRadius: '8px' }}>
                   <div style={{ fontSize: '11px', color: 'var(--text-muted)' }}>Threshold Applied</div>
-                  <div style={{ fontSize: '18px', fontWeight: 700, color: '#10b981' }}>{batchResults.threshold.toFixed(4)}</div>
+                  <div style={{ fontSize: '18px', fontWeight: 700, color: '#38bdf8' }}>{batchResults.threshold.toFixed(4)}</div>
                 </div>
               </div>
               <div style={{ fontSize: '12px', color: 'var(--text-muted)' }}>

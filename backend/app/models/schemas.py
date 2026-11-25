@@ -77,6 +77,21 @@ class BatchDetectionResponse(BaseModel):
     top_anomalous_sensors: list[SensorErrorBreakdown]
 
 
+class DemoWindowItem(BaseModel):
+    """A real test window for demo/verification."""
+    window_index: int
+    data: list[list[float]] = Field(description="30 timesteps x N sensors")
+    ground_truth_label: int = Field(description="0 for normal, 1 for anomaly")
+    start_timestep: int
+    end_timestep: int
+
+
+class DemoWindowsResponse(BaseModel):
+    """Response for GET /api/v1/demo/windows."""
+    total_windows: int
+    windows: list[DemoWindowItem]
+
+
 # ═══════════════════════════════════════════════
 # Model Metadata — FR-006
 # ═══════════════════════════════════════════════
