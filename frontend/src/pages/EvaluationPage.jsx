@@ -11,6 +11,7 @@
 import { useState, useEffect } from 'react';
 import Plot from 'react-plotly.js';
 import { getEvaluationReport } from '../services/api';
+import { formatDelta, getDeltaBadgeStyle } from '../utils/formatters';
 
 function MetricGauge({ label, value, color, isPct = true, subtitle = null }) {
   const displayVal = value !== null && value !== undefined
@@ -79,6 +80,22 @@ export default function EvaluationPage() {
   const oracle = lstm.oracle_diagnostic || {};
   const temporal = lstm.temporal_calibration || {};
   const improvements = data?.improvement || lstm.improvements || {};
+
+  // Programmatic trade-off note comparing LSTM vs Best Baseline
+  const bestB = lstm.best_baseline || baselinesList.find(b => b.method === improvements?.vs_baseline?.baseline_method);
+  let tradeoffNote = null;
+  if (bestB && lstm.recall !== undefined && bestB.recall !== undefined && lstm.precision !== undefined && bestB.precision !== undefined) {
+    const bestName = bestB.method?.replace('_', ' ') || 'best baseline';
+    if (lstm.recall > bestB.recall && lstm.precision < bestB.precision) {
+      tradeoffNote = `Higher recall, lower precision than ${bestName}`;
+    } else if (lstm.recall < bestB.recall && lstm.precision > bestB.precision) {
+      tradeoffNote = `Higher precision, lower recall than ${bestName}`;
+    } else if (lstm.recall >= bestB.recall && lstm.precision >= bestB.precision) {
+      tradeoffNote = `Higher recall and higher precision than ${bestName}`;
+    } else {
+      tradeoffNote = `Lower recall and lower precision than ${bestName}`;
+    }
+  }
 
   // Build comparison table entries
   const allMethods = [
@@ -149,21 +166,32 @@ export default function EvaluationPage() {
 
         {/* ── Primary LSTM Metric Gauges ── */}
         <div className="card" style={{ marginBottom: '20px' }}>
-          <div className="card-header">
+          <div className="card-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: '12px' }}>
             <div>
               <div className="card-title">LSTM Autoencoder — Primary Window Performance</div>
               <div className="card-subtitle">
                 Machine: {lstm.machine_id} · Threshold: {lstm.threshold?.toFixed(4)} ({lstm.threshold_strategy}) · Evaluated on 28,450 windows
               </div>
             </div>
-            {improvements.vs_baseline && (
-              <span style={{
-                background: 'rgba(16,185,129,0.15)', color: '#10b981',
-                padding: '4px 14px', borderRadius: '20px', fontSize: '13px', fontWeight: 600,
-              }}>
-                +{improvements.vs_baseline.f1_improvement_pct}% F1 vs Best Baseline
-              </span>
-            )}
+            <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: '6px' }}>
+              <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
+                {improvements.vs_baseline && (
+                  <span style={getDeltaBadgeStyle(improvements.vs_baseline.f1_delta_abs * 100)}>
+                    vs best baseline ({improvements.vs_baseline.baseline_method?.replace('_', ' ')}): {formatDelta(improvements.vs_baseline.f1_delta_abs * 100, 'pp')} F1 ({formatDelta(improvements.vs_baseline.f1_improvement_pct, '%')})
+                  </span>
+                )}
+                {improvements.vs_trivial && (
+                  <span style={getDeltaBadgeStyle(improvements.vs_trivial.f1_delta_abs * 100)}>
+                    vs Flag-Everything reference: {formatDelta(improvements.vs_trivial.f1_delta_abs * 100, 'pp')} F1 ({formatDelta(improvements.vs_trivial.f1_improvement_pct, '%')})
+                  </span>
+                )}
+              </div>
+              {tradeoffNote && (
+                <div style={{ fontSize: '11px', color: 'var(--text-muted)', fontStyle: 'italic' }}>
+                  {tradeoffNote}
+                </div>
+              )}
+            </div>
           </div>
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(6, 1fr)', gap: '12px', padding: '0 20px 20px' }}>
             <MetricGauge label="F1 Score" value={lstm.f1} color="#6366f1" subtitle="Primary window metric" />
