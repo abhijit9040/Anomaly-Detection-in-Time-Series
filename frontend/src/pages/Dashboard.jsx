@@ -18,6 +18,7 @@ export default function Dashboard() {
   // Stream state
   const [timestamps, setTimestamps] = useState([]);
   const [reconErrors, setReconErrors] = useState([]);
+  const [smoothedErrors, setSmoothedErrors] = useState([]);
   const [anomalyFlags, setAnomalyFlags] = useState([]);
   const [sensor0, setSensor0] = useState([]);
   const [sensor1, setSensor1] = useState([]);
@@ -89,11 +90,17 @@ export default function Dashboard() {
         setTopRootCauses(top3);
       }
 
-      if (d.reconstruction_error !== null) {
+      if (d.reconstruction_error !== null && d.reconstruction_error !== undefined) {
         const err = d.reconstruction_error;
         setReconErrors(prev => [...prev.slice(-MAX_POINTS), err]);
         setAnomalyFlags(prev => [...prev.slice(-MAX_POINTS), d.is_anomaly]);
         setLastError(err);
+
+        if (d.smoothed_error !== null && d.smoothed_error !== undefined) {
+          setSmoothedErrors(prev => [...prev.slice(-MAX_POINTS), d.smoothed_error]);
+        } else {
+          setSmoothedErrors(prev => [...prev.slice(-MAX_POINTS), err]);
+        }
 
         // One alert per anomaly EVENT, not one per anomalous timestep.
         const step = advanceAlertState(alertStateRef.current, d.is_anomaly);
@@ -411,15 +418,20 @@ export default function Dashboard() {
           <div className="chart-container">
             <div className="card-header">
               <div className="card-title">Reconstruction Error</div>
-              <div className="card-subtitle">LSTM anomaly score vs threshold</div>
+              <div className="card-subtitle">Raw & smoothed (k=5) anomaly scores vs threshold</div>
             </div>
             {reconErrors.length > 0 ? (
               <Plot
                 data={[
                   {
                     x: timestamps.slice(-reconErrors.length),
-                    y: reconErrors, mode: 'lines', name: 'Recon. Error',
-                    line: { color: '#6366f1', width: 1.5 },
+                    y: reconErrors, mode: 'lines', name: 'Raw Error',
+                    line: { color: 'rgba(99,102,241,0.4)', width: 1.2 },
+                  },
+                  {
+                    x: timestamps.slice(-smoothedErrors.length),
+                    y: smoothedErrors, mode: 'lines', name: 'Smoothed Error (k=5)',
+                    line: { color: '#6366f1', width: 2.2 },
                     fill: 'tozeroy', fillcolor: 'rgba(99,102,241,0.08)',
                   },
                   {
@@ -431,7 +443,7 @@ export default function Dashboard() {
                   {
                     x: timestamps.slice(-reconErrors.length).filter((_, i) => anomalyFlags[i]),
                     y: reconErrors.filter((_, i) => anomalyFlags[i]),
-                    mode: 'markers', name: 'Anomaly',
+                    mode: 'markers', name: 'Anomaly Flag',
                     marker: { color: '#ef4444', size: 7, symbol: 'circle' },
                   },
                 ]}

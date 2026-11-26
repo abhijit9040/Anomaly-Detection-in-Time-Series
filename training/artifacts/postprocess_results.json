@@ -1,0 +1,1024 @@
+{
+  "full_test_fixed_defaults": {
+    "lstm_raw": {
+      "method": "LSTM_Autoencoder_Raw",
+      "threshold": 0.154136,
+      "precision": 0.4242,
+      "recall": 0.9491,
+      "f1": 0.5864,
+      "flagged_rate": 0.2301,
+      "auc_roc": 0.9461,
+      "auc_pr": 0.6125,
+      "event_recall": 1.0,
+      "detected_events": "8/8",
+      "false_alarm_events": 94,
+      "mean_detection_delay": 0.0,
+      "alerts_per_1000_windows": 4.11
+    },
+    "lstm_postprocessed": {
+      "method": "LSTM_Autoencoder_Postprocessed",
+      "threshold": 0.152915,
+      "precision": 0.4063,
+      "recall": 0.9627,
+      "f1": 0.5715,
+      "flagged_rate": 0.2437,
+      "auc_roc": 0.9461,
+      "auc_pr": 0.6125,
+      "event_recall": 1.0,
+      "detected_events": "8/8",
+      "false_alarm_events": 46,
+      "mean_detection_delay": 2.0,
+      "alerts_per_1000_windows": 2.0
+    },
+    "pca_raw": {
+      "method": "PCA_Reconstruction_Raw",
+      "threshold": 0.235026,
+      "precision": 0.609,
+      "recall": 0.5803,
+      "f1": 0.5943,
+      "flagged_rate": 0.098,
+      "auc_roc": 0.9466,
+      "auc_pr": 0.7174,
+      "event_recall": 1.0,
+      "detected_events": "8/8",
+      "false_alarm_events": 42,
+      "mean_detection_delay": 0.0,
+      "alerts_per_1000_windows": 3.06
+    },
+    "pca_postprocessed": {
+      "method": "PCA_Reconstruction_Postprocessed",
+      "threshold": 0.234524,
+      "precision": 0.5834,
+      "recall": 0.6107,
+      "f1": 0.5968,
+      "flagged_rate": 0.1077,
+      "auc_roc": 0.9466,
+      "auc_pr": 0.7174,
+      "event_recall": 1.0,
+      "detected_events": "8/8",
+      "false_alarm_events": 24,
+      "mean_detection_delay": 2.88,
+      "alerts_per_1000_windows": 1.79
+    }
+  },
+  "temporal_calibration_70pct_heldout": {
+    "lstm": {
+      "description": "Temporal calibration protocol (30% calibration, 70% held-out test)",
+      "calibration_samples": 8535,
+      "heldout_samples": 19915,
+      "calibration_selected_params": {
+        "k": 1,
+        "m": 10
+      },
+      "calibration_grid": [
+        {
+          "k": 1,
+          "m": 1,
+          "calibration_false_alarms": 19,
+          "calibration_flagged_rate": 0.0726
+        },
+        {
+          "k": 1,
+          "m": 3,
+          "calibration_false_alarms": 19,
+          "calibration_flagged_rate": 0.0682
+        },
+        {
+          "k": 1,
+          "m": 5,
+          "calibration_false_alarms": 19,
+          "calibration_flagged_rate": 0.0637
+        },
+        {
+          "k": 1,
+          "m": 10,
+          "calibration_false_alarms": 16,
+          "calibration_flagged_rate": 0.0533
+        },
+        {
+          "k": 3,
+          "m": 1,
+          "calibration_false_alarms": 19,
+          "calibration_flagged_rate": 0.0733
+        },
+        {
+          "k": 3,
+          "m": 3,
+          "calibration_false_alarms": 19,
+          "calibration_flagged_rate": 0.0689
+        },
+        {
+          "k": 3,
+          "m": 5,
+          "calibration_false_alarms": 19,
+          "calibration_flagged_rate": 0.0644
+        },
+        {
+          "k": 3,
+          "m": 10,
+          "calibration_false_alarms": 16,
+          "calibration_flagged_rate": 0.0538
+        },
+        {
+          "k": 5,
+          "m": 1,
+          "calibration_false_alarms": 17,
+          "calibration_flagged_rate": 0.0692
+        },
+        {
+          "k": 5,
+          "m": 3,
+          "calibration_false_alarms": 17,
+          "calibration_flagged_rate": 0.0653
+        },
+        {
+          "k": 5,
+          "m": 5,
+          "calibration_false_alarms": 16,
+          "calibration_flagged_rate": 0.0613
+        },
+        {
+          "k": 5,
+          "m": 10,
+          "calibration_false_alarms": 16,
+          "calibration_flagged_rate": 0.0519
+        },
+        {
+          "k": 10,
+          "m": 1,
+          "calibration_false_alarms": 16,
+          "calibration_flagged_rate": 0.0737
+        },
+        {
+          "k": 10,
+          "m": 3,
+          "calibration_false_alarms": 16,
+          "calibration_flagged_rate": 0.0699
+        },
+        {
+          "k": 10,
+          "m": 5,
+          "calibration_false_alarms": 16,
+          "calibration_flagged_rate": 0.0662
+        },
+        {
+          "k": 10,
+          "m": 10,
+          "calibration_false_alarms": 16,
+          "calibration_flagged_rate": 0.0568
+        },
+        {
+          "k": 20,
+          "m": 1,
+          "calibration_false_alarms": 16,
+          "calibration_flagged_rate": 0.0824
+        },
+        {
+          "k": 20,
+          "m": 3,
+          "calibration_false_alarms": 16,
+          "calibration_flagged_rate": 0.0786
+        },
+        {
+          "k": 20,
+          "m": 5,
+          "calibration_false_alarms": 16,
+          "calibration_flagged_rate": 0.0749
+        },
+        {
+          "k": 20,
+          "m": 10,
+          "calibration_false_alarms": 16,
+          "calibration_flagged_rate": 0.0655
+        }
+      ],
+      "raw_heldout": {
+        "method": "Raw Held-out",
+        "threshold": 0.154136,
+        "precision": 0.4594,
+        "recall": 0.9491,
+        "f1": 0.6191,
+        "flagged_rate": 0.3035,
+        "auc_roc": 0.9249,
+        "auc_pr": 0.6196,
+        "event_recall": 1.0,
+        "detected_events": "8/8",
+        "false_alarm_events": 67,
+        "mean_detection_delay": 0.0,
+        "alerts_per_1000_windows": 4.52
+      },
+      "fixed_defaults_heldout": {
+        "method": "Post-processed (Fixed Defaults k=5, m=3)",
+        "threshold": 0.152915,
+        "precision": 0.4418,
+        "recall": 0.9627,
+        "f1": 0.6057,
+        "flagged_rate": 0.3202,
+        "auc_roc": 0.9249,
+        "auc_pr": 0.6196,
+        "event_recall": 1.0,
+        "detected_events": "8/8",
+        "false_alarm_events": 29,
+        "mean_detection_delay": 2.0,
+        "alerts_per_1000_windows": 2.01
+      },
+      "calibration_selected_heldout": {
+        "method": "Post-processed (Calibration-selected k=1, m=10)",
+        "threshold": 0.154136,
+        "precision": 0.4519,
+        "recall": 0.9293,
+        "f1": 0.6081,
+        "flagged_rate": 0.3021,
+        "auc_roc": 0.9249,
+        "auc_pr": 0.6196,
+        "event_recall": 1.0,
+        "detected_events": "8/8",
+        "false_alarm_events": 27,
+        "mean_detection_delay": 8.0,
+        "alerts_per_1000_windows": 1.96
+      }
+    },
+    "pca": {
+      "description": "Temporal calibration protocol (30% calibration, 70% held-out test)",
+      "calibration_samples": 8535,
+      "heldout_samples": 19915,
+      "calibration_selected_params": {
+        "k": 1,
+        "m": 10
+      },
+      "calibration_grid": [
+        {
+          "k": 1,
+          "m": 1,
+          "calibration_false_alarms": 3,
+          "calibration_flagged_rate": 0.0079
+        },
+        {
+          "k": 1,
+          "m": 3,
+          "calibration_false_alarms": 3,
+          "calibration_flagged_rate": 0.0071
+        },
+        {
+          "k": 1,
+          "m": 5,
+          "calibration_false_alarms": 3,
+          "calibration_flagged_rate": 0.0064
+        },
+        {
+          "k": 1,
+          "m": 10,
+          "calibration_false_alarms": 2,
+          "calibration_flagged_rate": 0.0048
+        },
+        {
+          "k": 3,
+          "m": 1,
+          "calibration_false_alarms": 3,
+          "calibration_flagged_rate": 0.0076
+        },
+        {
+          "k": 3,
+          "m": 3,
+          "calibration_false_alarms": 3,
+          "calibration_flagged_rate": 0.0069
+        },
+        {
+          "k": 3,
+          "m": 5,
+          "calibration_false_alarms": 3,
+          "calibration_flagged_rate": 0.0062
+        },
+        {
+          "k": 3,
+          "m": 10,
+          "calibration_false_alarms": 2,
+          "calibration_flagged_rate": 0.0046
+        },
+        {
+          "k": 5,
+          "m": 1,
+          "calibration_false_alarms": 2,
+          "calibration_flagged_rate": 0.006
+        },
+        {
+          "k": 5,
+          "m": 3,
+          "calibration_false_alarms": 2,
+          "calibration_flagged_rate": 0.0055
+        },
+        {
+          "k": 5,
+          "m": 5,
+          "calibration_false_alarms": 2,
+          "calibration_flagged_rate": 0.005
+        },
+        {
+          "k": 5,
+          "m": 10,
+          "calibration_false_alarms": 2,
+          "calibration_flagged_rate": 0.0039
+        },
+        {
+          "k": 10,
+          "m": 1,
+          "calibration_false_alarms": 2,
+          "calibration_flagged_rate": 0.0062
+        },
+        {
+          "k": 10,
+          "m": 3,
+          "calibration_false_alarms": 2,
+          "calibration_flagged_rate": 0.0057
+        },
+        {
+          "k": 10,
+          "m": 5,
+          "calibration_false_alarms": 2,
+          "calibration_flagged_rate": 0.0053
+        },
+        {
+          "k": 10,
+          "m": 10,
+          "calibration_false_alarms": 2,
+          "calibration_flagged_rate": 0.0041
+        },
+        {
+          "k": 20,
+          "m": 1,
+          "calibration_false_alarms": 3,
+          "calibration_flagged_rate": 0.008
+        },
+        {
+          "k": 20,
+          "m": 3,
+          "calibration_false_alarms": 3,
+          "calibration_flagged_rate": 0.0073
+        },
+        {
+          "k": 20,
+          "m": 5,
+          "calibration_false_alarms": 3,
+          "calibration_flagged_rate": 0.0066
+        },
+        {
+          "k": 20,
+          "m": 10,
+          "calibration_false_alarms": 3,
+          "calibration_flagged_rate": 0.0048
+        }
+      ],
+      "raw_heldout": {
+        "method": "Raw Held-out",
+        "threshold": 0.235026,
+        "precision": 0.6204,
+        "recall": 0.5803,
+        "f1": 0.5997,
+        "flagged_rate": 0.1374,
+        "auc_roc": 0.9329,
+        "auc_pr": 0.7364,
+        "event_recall": 1.0,
+        "detected_events": "8/8",
+        "false_alarm_events": 38,
+        "mean_detection_delay": 0.0,
+        "alerts_per_1000_windows": 4.17
+      },
+      "fixed_defaults_heldout": {
+        "method": "Post-processed (Fixed Defaults k=5, m=3)",
+        "threshold": 0.234524,
+        "precision": 0.5925,
+        "recall": 0.6107,
+        "f1": 0.6015,
+        "flagged_rate": 0.1514,
+        "auc_roc": 0.9329,
+        "auc_pr": 0.7364,
+        "event_recall": 1.0,
+        "detected_events": "8/8",
+        "false_alarm_events": 22,
+        "mean_detection_delay": 2.88,
+        "alerts_per_1000_windows": 2.46
+      },
+      "calibration_selected_heldout": {
+        "method": "Post-processed (Calibration-selected k=1, m=10)",
+        "threshold": 0.235026,
+        "precision": 0.6094,
+        "recall": 0.5444,
+        "f1": 0.5751,
+        "flagged_rate": 0.1313,
+        "auc_roc": 0.9329,
+        "auc_pr": 0.7364,
+        "event_recall": 1.0,
+        "detected_events": "8/8",
+        "false_alarm_events": 23,
+        "mean_detection_delay": 8.25,
+        "alerts_per_1000_windows": 2.56
+      }
+    }
+  },
+  "sensitivity_grids": {
+    "lstm": [
+      {
+        "k": 1,
+        "m": 1,
+        "threshold": 0.154136,
+        "precision": 0.4007,
+        "recall": 0.9634,
+        "f1": 0.566,
+        "flagged_rate": 0.2473,
+        "event_recall": 1.0,
+        "detected_events": "8/8",
+        "false_alarm_events": 55,
+        "mean_detection_delay": 0.0,
+        "alerts_per_1000_windows": 2.36,
+        "note": "Transparency grid only"
+      },
+      {
+        "k": 1,
+        "m": 3,
+        "threshold": 0.154136,
+        "precision": 0.4061,
+        "recall": 0.958,
+        "f1": 0.5704,
+        "flagged_rate": 0.2426,
+        "event_recall": 1.0,
+        "detected_events": "8/8",
+        "false_alarm_events": 54,
+        "mean_detection_delay": 1.0,
+        "alerts_per_1000_windows": 2.32,
+        "note": "Transparency grid only"
+      },
+      {
+        "k": 1,
+        "m": 5,
+        "threshold": 0.154136,
+        "precision": 0.4104,
+        "recall": 0.9498,
+        "f1": 0.5732,
+        "flagged_rate": 0.238,
+        "event_recall": 1.0,
+        "detected_events": "8/8",
+        "false_alarm_events": 52,
+        "mean_detection_delay": 3.0,
+        "alerts_per_1000_windows": 2.25,
+        "note": "Transparency grid only"
+      },
+      {
+        "k": 1,
+        "m": 10,
+        "threshold": 0.154136,
+        "precision": 0.4201,
+        "recall": 0.9293,
+        "f1": 0.5786,
+        "flagged_rate": 0.2275,
+        "event_recall": 1.0,
+        "detected_events": "8/8",
+        "false_alarm_events": 43,
+        "mean_detection_delay": 8.0,
+        "alerts_per_1000_windows": 1.93,
+        "note": "Transparency grid only"
+      },
+      {
+        "k": 3,
+        "m": 1,
+        "threshold": 0.153035,
+        "precision": 0.4008,
+        "recall": 0.9706,
+        "f1": 0.5674,
+        "flagged_rate": 0.249,
+        "event_recall": 1.0,
+        "detected_events": "8/8",
+        "false_alarm_events": 51,
+        "mean_detection_delay": 0.0,
+        "alerts_per_1000_windows": 2.18,
+        "note": "Transparency grid only"
+      },
+      {
+        "k": 3,
+        "m": 3,
+        "threshold": 0.153035,
+        "precision": 0.4054,
+        "recall": 0.9645,
+        "f1": 0.5709,
+        "flagged_rate": 0.2447,
+        "event_recall": 1.0,
+        "detected_events": "8/8",
+        "false_alarm_events": 51,
+        "mean_detection_delay": 1.5,
+        "alerts_per_1000_windows": 2.18,
+        "note": "Transparency grid only"
+      },
+      {
+        "k": 3,
+        "m": 5,
+        "threshold": 0.153035,
+        "precision": 0.4095,
+        "recall": 0.9569,
+        "f1": 0.5736,
+        "flagged_rate": 0.2403,
+        "event_recall": 1.0,
+        "detected_events": "8/8",
+        "false_alarm_events": 50,
+        "mean_detection_delay": 3.5,
+        "alerts_per_1000_windows": 2.14,
+        "note": "Transparency grid only"
+      },
+      {
+        "k": 3,
+        "m": 10,
+        "threshold": 0.153035,
+        "precision": 0.419,
+        "recall": 0.9381,
+        "f1": 0.5793,
+        "flagged_rate": 0.2303,
+        "event_recall": 1.0,
+        "detected_events": "8/8",
+        "false_alarm_events": 41,
+        "mean_detection_delay": 8.5,
+        "alerts_per_1000_windows": 1.83,
+        "note": "Transparency grid only"
+      },
+      {
+        "k": 5,
+        "m": 1,
+        "threshold": 0.152915,
+        "precision": 0.4029,
+        "recall": 0.9703,
+        "f1": 0.5693,
+        "flagged_rate": 0.2477,
+        "event_recall": 1.0,
+        "detected_events": "8/8",
+        "false_alarm_events": 46,
+        "mean_detection_delay": 0.0,
+        "alerts_per_1000_windows": 2.0,
+        "note": "Transparency grid only"
+      },
+      {
+        "k": 5,
+        "m": 3,
+        "threshold": 0.152915,
+        "precision": 0.4063,
+        "recall": 0.9627,
+        "f1": 0.5715,
+        "flagged_rate": 0.2437,
+        "event_recall": 1.0,
+        "detected_events": "8/8",
+        "false_alarm_events": 46,
+        "mean_detection_delay": 2.0,
+        "alerts_per_1000_windows": 2.0,
+        "note": "Fixed default (decided in advance)"
+      },
+      {
+        "k": 5,
+        "m": 5,
+        "threshold": 0.152915,
+        "precision": 0.4099,
+        "recall": 0.9552,
+        "f1": 0.5736,
+        "flagged_rate": 0.2397,
+        "event_recall": 1.0,
+        "detected_events": "8/8",
+        "false_alarm_events": 45,
+        "mean_detection_delay": 4.0,
+        "alerts_per_1000_windows": 1.97,
+        "note": "Transparency grid only"
+      },
+      {
+        "k": 5,
+        "m": 10,
+        "threshold": 0.152915,
+        "precision": 0.418,
+        "recall": 0.9364,
+        "f1": 0.578,
+        "flagged_rate": 0.2304,
+        "event_recall": 1.0,
+        "detected_events": "8/8",
+        "false_alarm_events": 39,
+        "mean_detection_delay": 9.0,
+        "alerts_per_1000_windows": 1.76,
+        "note": "Transparency grid only"
+      },
+      {
+        "k": 10,
+        "m": 1,
+        "threshold": 0.149597,
+        "precision": 0.3951,
+        "recall": 0.971,
+        "f1": 0.5617,
+        "flagged_rate": 0.2527,
+        "event_recall": 1.0,
+        "detected_events": "8/8",
+        "false_alarm_events": 39,
+        "mean_detection_delay": 0.75,
+        "alerts_per_1000_windows": 1.76,
+        "note": "Transparency grid only"
+      },
+      {
+        "k": 10,
+        "m": 3,
+        "threshold": 0.149597,
+        "precision": 0.3976,
+        "recall": 0.9634,
+        "f1": 0.5629,
+        "flagged_rate": 0.2492,
+        "event_recall": 1.0,
+        "detected_events": "8/8",
+        "false_alarm_events": 39,
+        "mean_detection_delay": 2.75,
+        "alerts_per_1000_windows": 1.76,
+        "note": "Transparency grid only"
+      },
+      {
+        "k": 10,
+        "m": 5,
+        "threshold": 0.149597,
+        "precision": 0.4001,
+        "recall": 0.9559,
+        "f1": 0.5641,
+        "flagged_rate": 0.2457,
+        "event_recall": 1.0,
+        "detected_events": "8/8",
+        "false_alarm_events": 39,
+        "mean_detection_delay": 4.75,
+        "alerts_per_1000_windows": 1.76,
+        "note": "Transparency grid only"
+      },
+      {
+        "k": 10,
+        "m": 10,
+        "threshold": 0.149597,
+        "precision": 0.4066,
+        "recall": 0.9371,
+        "f1": 0.5672,
+        "flagged_rate": 0.237,
+        "event_recall": 1.0,
+        "detected_events": "8/8",
+        "false_alarm_events": 38,
+        "mean_detection_delay": 9.75,
+        "alerts_per_1000_windows": 1.72,
+        "note": "Transparency grid only"
+      },
+      {
+        "k": 20,
+        "m": 1,
+        "threshold": 0.141091,
+        "precision": 0.3763,
+        "recall": 0.9744,
+        "f1": 0.5429,
+        "flagged_rate": 0.2663,
+        "event_recall": 1.0,
+        "detected_events": "8/8",
+        "false_alarm_events": 38,
+        "mean_detection_delay": 2.0,
+        "alerts_per_1000_windows": 1.72,
+        "note": "Transparency grid only"
+      },
+      {
+        "k": 20,
+        "m": 3,
+        "threshold": 0.141091,
+        "precision": 0.3783,
+        "recall": 0.9668,
+        "f1": 0.5438,
+        "flagged_rate": 0.2629,
+        "event_recall": 1.0,
+        "detected_events": "8/8",
+        "false_alarm_events": 38,
+        "mean_detection_delay": 4.0,
+        "alerts_per_1000_windows": 1.72,
+        "note": "Transparency grid only"
+      },
+      {
+        "k": 20,
+        "m": 5,
+        "threshold": 0.141091,
+        "precision": 0.3803,
+        "recall": 0.9593,
+        "f1": 0.5447,
+        "flagged_rate": 0.2594,
+        "event_recall": 1.0,
+        "detected_events": "8/8",
+        "false_alarm_events": 38,
+        "mean_detection_delay": 6.0,
+        "alerts_per_1000_windows": 1.72,
+        "note": "Transparency grid only"
+      },
+      {
+        "k": 20,
+        "m": 10,
+        "threshold": 0.141091,
+        "precision": 0.3857,
+        "recall": 0.9405,
+        "f1": 0.547,
+        "flagged_rate": 0.2508,
+        "event_recall": 1.0,
+        "detected_events": "8/8",
+        "false_alarm_events": 38,
+        "mean_detection_delay": 11.0,
+        "alerts_per_1000_windows": 1.72,
+        "note": "Transparency grid only"
+      }
+    ],
+    "pca": [
+      {
+        "k": 1,
+        "m": 1,
+        "threshold": 0.235026,
+        "precision": 0.5865,
+        "recall": 0.6306,
+        "f1": 0.6077,
+        "flagged_rate": 0.1106,
+        "event_recall": 1.0,
+        "detected_events": "8/8",
+        "false_alarm_events": 26,
+        "mean_detection_delay": 0.0,
+        "alerts_per_1000_windows": 1.97,
+        "note": "Transparency grid only"
+      },
+      {
+        "k": 1,
+        "m": 3,
+        "threshold": 0.235026,
+        "precision": 0.5904,
+        "recall": 0.6124,
+        "f1": 0.6012,
+        "flagged_rate": 0.1067,
+        "event_recall": 1.0,
+        "detected_events": "8/8",
+        "false_alarm_events": 26,
+        "mean_detection_delay": 1.25,
+        "alerts_per_1000_windows": 1.93,
+        "note": "Transparency grid only"
+      },
+      {
+        "k": 1,
+        "m": 5,
+        "threshold": 0.235026,
+        "precision": 0.5928,
+        "recall": 0.5926,
+        "f1": 0.5927,
+        "flagged_rate": 0.1028,
+        "event_recall": 1.0,
+        "detected_events": "8/8",
+        "false_alarm_events": 26,
+        "mean_detection_delay": 3.25,
+        "alerts_per_1000_windows": 1.93,
+        "note": "Transparency grid only"
+      },
+      {
+        "k": 1,
+        "m": 10,
+        "threshold": 0.235026,
+        "precision": 0.6,
+        "recall": 0.5444,
+        "f1": 0.5709,
+        "flagged_rate": 0.0933,
+        "event_recall": 1.0,
+        "detected_events": "8/8",
+        "false_alarm_events": 25,
+        "mean_detection_delay": 8.25,
+        "alerts_per_1000_windows": 1.86,
+        "note": "Transparency grid only"
+      },
+      {
+        "k": 3,
+        "m": 1,
+        "threshold": 0.234671,
+        "precision": 0.5827,
+        "recall": 0.6295,
+        "f1": 0.6052,
+        "flagged_rate": 0.1111,
+        "event_recall": 1.0,
+        "detected_events": "8/8",
+        "false_alarm_events": 25,
+        "mean_detection_delay": 0.12,
+        "alerts_per_1000_windows": 1.9,
+        "note": "Transparency grid only"
+      },
+      {
+        "k": 3,
+        "m": 3,
+        "threshold": 0.234671,
+        "precision": 0.5843,
+        "recall": 0.6097,
+        "f1": 0.5968,
+        "flagged_rate": 0.1073,
+        "event_recall": 1.0,
+        "detected_events": "8/8",
+        "false_alarm_events": 25,
+        "mean_detection_delay": 2.12,
+        "alerts_per_1000_windows": 1.9,
+        "note": "Transparency grid only"
+      },
+      {
+        "k": 3,
+        "m": 5,
+        "threshold": 0.234671,
+        "precision": 0.5861,
+        "recall": 0.5899,
+        "f1": 0.588,
+        "flagged_rate": 0.1035,
+        "event_recall": 1.0,
+        "detected_events": "8/8",
+        "false_alarm_events": 25,
+        "mean_detection_delay": 4.12,
+        "alerts_per_1000_windows": 1.9,
+        "note": "Transparency grid only"
+      },
+      {
+        "k": 3,
+        "m": 10,
+        "threshold": 0.234671,
+        "precision": 0.5913,
+        "recall": 0.5414,
+        "f1": 0.5652,
+        "flagged_rate": 0.0942,
+        "event_recall": 1.0,
+        "detected_events": "8/8",
+        "false_alarm_events": 24,
+        "mean_detection_delay": 9.12,
+        "alerts_per_1000_windows": 1.83,
+        "note": "Transparency grid only"
+      },
+      {
+        "k": 5,
+        "m": 1,
+        "threshold": 0.234524,
+        "precision": 0.5817,
+        "recall": 0.6292,
+        "f1": 0.6045,
+        "flagged_rate": 0.1112,
+        "event_recall": 1.0,
+        "detected_events": "8/8",
+        "false_alarm_events": 24,
+        "mean_detection_delay": 0.88,
+        "alerts_per_1000_windows": 1.79,
+        "note": "Transparency grid only"
+      },
+      {
+        "k": 5,
+        "m": 3,
+        "threshold": 0.234524,
+        "precision": 0.5834,
+        "recall": 0.6107,
+        "f1": 0.5968,
+        "flagged_rate": 0.1077,
+        "event_recall": 1.0,
+        "detected_events": "8/8",
+        "false_alarm_events": 24,
+        "mean_detection_delay": 2.88,
+        "alerts_per_1000_windows": 1.79,
+        "note": "Fixed default (decided in advance)"
+      },
+      {
+        "k": 5,
+        "m": 5,
+        "threshold": 0.234524,
+        "precision": 0.5853,
+        "recall": 0.5923,
+        "f1": 0.5888,
+        "flagged_rate": 0.1041,
+        "event_recall": 1.0,
+        "detected_events": "8/8",
+        "false_alarm_events": 24,
+        "mean_detection_delay": 4.88,
+        "alerts_per_1000_windows": 1.79,
+        "note": "Transparency grid only"
+      },
+      {
+        "k": 5,
+        "m": 10,
+        "threshold": 0.234524,
+        "precision": 0.5905,
+        "recall": 0.5461,
+        "f1": 0.5675,
+        "flagged_rate": 0.0951,
+        "event_recall": 1.0,
+        "detected_events": "8/8",
+        "false_alarm_events": 24,
+        "mean_detection_delay": 9.88,
+        "alerts_per_1000_windows": 1.79,
+        "note": "Transparency grid only"
+      },
+      {
+        "k": 10,
+        "m": 1,
+        "threshold": 0.232544,
+        "precision": 0.5892,
+        "recall": 0.6538,
+        "f1": 0.6198,
+        "flagged_rate": 0.1141,
+        "event_recall": 1.0,
+        "detected_events": "8/8",
+        "false_alarm_events": 22,
+        "mean_detection_delay": 2.38,
+        "alerts_per_1000_windows": 1.62,
+        "note": "Transparency grid only"
+      },
+      {
+        "k": 10,
+        "m": 3,
+        "threshold": 0.232544,
+        "precision": 0.5911,
+        "recall": 0.6374,
+        "f1": 0.6134,
+        "flagged_rate": 0.1109,
+        "event_recall": 1.0,
+        "detected_events": "8/8",
+        "false_alarm_events": 22,
+        "mean_detection_delay": 4.38,
+        "alerts_per_1000_windows": 1.62,
+        "note": "Transparency grid only"
+      },
+      {
+        "k": 10,
+        "m": 5,
+        "threshold": 0.232544,
+        "precision": 0.5932,
+        "recall": 0.621,
+        "f1": 0.6068,
+        "flagged_rate": 0.1077,
+        "event_recall": 1.0,
+        "detected_events": "8/8",
+        "false_alarm_events": 22,
+        "mean_detection_delay": 6.38,
+        "alerts_per_1000_windows": 1.62,
+        "note": "Transparency grid only"
+      },
+      {
+        "k": 10,
+        "m": 10,
+        "threshold": 0.232544,
+        "precision": 0.599,
+        "recall": 0.58,
+        "f1": 0.5893,
+        "flagged_rate": 0.0996,
+        "event_recall": 1.0,
+        "detected_events": "8/8",
+        "false_alarm_events": 22,
+        "mean_detection_delay": 11.38,
+        "alerts_per_1000_windows": 1.62,
+        "note": "Transparency grid only"
+      },
+      {
+        "k": 20,
+        "m": 1,
+        "threshold": 0.213036,
+        "precision": 0.5521,
+        "recall": 0.7177,
+        "f1": 0.6241,
+        "flagged_rate": 0.1337,
+        "event_recall": 1.0,
+        "detected_events": "8/8",
+        "false_alarm_events": 19,
+        "mean_detection_delay": 4.5,
+        "alerts_per_1000_windows": 1.37,
+        "note": "Transparency grid only"
+      },
+      {
+        "k": 20,
+        "m": 3,
+        "threshold": 0.213036,
+        "precision": 0.5529,
+        "recall": 0.704,
+        "f1": 0.6194,
+        "flagged_rate": 0.131,
+        "event_recall": 1.0,
+        "detected_events": "8/8",
+        "false_alarm_events": 19,
+        "mean_detection_delay": 6.5,
+        "alerts_per_1000_windows": 1.37,
+        "note": "Transparency grid only"
+      },
+      {
+        "k": 20,
+        "m": 5,
+        "threshold": 0.213036,
+        "precision": 0.5537,
+        "recall": 0.6904,
+        "f1": 0.6145,
+        "flagged_rate": 0.1282,
+        "event_recall": 1.0,
+        "detected_events": "8/8",
+        "false_alarm_events": 19,
+        "mean_detection_delay": 8.5,
+        "alerts_per_1000_windows": 1.37,
+        "note": "Transparency grid only"
+      },
+      {
+        "k": 20,
+        "m": 10,
+        "threshold": 0.213036,
+        "precision": 0.556,
+        "recall": 0.6562,
+        "f1": 0.602,
+        "flagged_rate": 0.1214,
+        "event_recall": 1.0,
+        "detected_events": "8/8",
+        "false_alarm_events": 19,
+        "mean_detection_delay": 13.5,
+        "alerts_per_1000_windows": 1.37,
+        "note": "Transparency grid only"
+      }
+    ]
+  }
+}

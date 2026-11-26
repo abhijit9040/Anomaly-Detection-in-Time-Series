@@ -29,12 +29,14 @@ from app.models.schemas import (
     TokenResponse,
     WindowDetectionResult,
 )
+from app.services.alerting_service import AlertingService
 from app.services.model_service import model_service
 from app.services.stream_service import stream_service
 
 logger = logging.getLogger(__name__)
 
 router = APIRouter(prefix="/api/v1", tags=["v1"])
+alerting_service = AlertingService(k=5, m=3, low_ratio=0.8)
 
 
 def _require_model():
@@ -341,10 +343,20 @@ async def get_evaluation_report():
             ),
         }
 
+    postprocess_data = None
+    postprocess_path = project_root / "training" / "reports" / "postprocess_data.json"
+    if postprocess_path.exists():
+        try:
+            with open(postprocess_path, "r", encoding="utf-8") as f:
+                postprocess_data = json.load(f)
+        except Exception as e:
+            logger.warning("Could not read postprocess_data.json: %s", e)
+
     return {
         "lstm_autoencoder": lstm_results,
         "baseline": baseline,
         "improvement": improvement,
+        "postprocessing": postprocess_data,
         "f1": lstm_results.get("f1"),
         "precision": lstm_results.get("precision"),
         "recall": lstm_results.get("recall"),
@@ -389,6 +401,8 @@ async def get_stream_data():
 
     # Run anomaly detection if model is available
     reconstruction_error = None
+    smoothed_error = None
+    alert_active = None
     is_anomaly = None
     sensor_errors = None
 
@@ -411,6 +425,14 @@ async def get_stream_data():
                 )
                 for i, e in enumerate(result.get("per_sensor_errors", []))
             ]
+
+            # Apply stateful causal post-processing alerting pipeline
+            alert_res = alerting_service.process(
+                error=reconstruction_error,
+                threshold=model_service.threshold,
+            )
+            smoothed_error = alert_res["smoothed_error"]
+            alert_active = alert_res["alert_active"]
         except Exception as e:
             logger.warning("Inference failed for stream point: %s", e)
 
@@ -419,6 +441,8 @@ async def get_stream_data():
         sensor_values=point["sensor_values"],
         is_anomaly=is_anomaly,
         reconstruction_error=reconstruction_error,
+        smoothed_error=smoothed_error,
+        alert_active=alert_active,
         sensor_errors=sensor_errors,
         timestep=point.get("timestep"),
         ground_truth_label=point.get("ground_truth_label"),
@@ -433,6 +457,7 @@ async def get_stream_data():
     summary="Seek replay stream to a specific timestep",
 )
 async def seek_stream(req: StreamSeekRequest):
+    alerting_service.reset()
     new_idx = stream_service.seek(req.index)
     return {"current_index": new_idx, "message": f"Stream moved to timestep {new_idx}"}
 
@@ -442,6 +467,7 @@ async def seek_stream(req: StreamSeekRequest):
     summary="Jump replay stream to just before the first real anomaly event",
 )
 async def jump_to_anomaly():
+    alerting_service.reset()
     new_idx = stream_service.jump_to_anomaly(lead_in=15)
     return {
         "current_index": new_idx,

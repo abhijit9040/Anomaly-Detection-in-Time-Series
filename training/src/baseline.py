@@ -18,6 +18,7 @@ import logging
 from pathlib import Path
 from typing import Any
 
+import joblib
 import numpy as np
 from sklearn.decomposition import PCA
 from sklearn.ensemble import IsolationForest
@@ -83,6 +84,17 @@ class PCABaseline:
         recon = self.pca.inverse_transform(self.pca.transform(flattened))
         mse = np.mean((flattened - recon) ** 2, axis=1)
         return mse
+
+    def save(self, path: Path | str) -> None:
+        """Save fitted PCA model with joblib."""
+        joblib.dump(self.pca, path)
+
+    @classmethod
+    def load(cls, path: Path | str, n_components: int = 10, random_state: int = 42) -> PCABaseline:
+        """Load fitted PCA model from disk."""
+        instance = cls(n_components=n_components, random_state=random_state)
+        instance.pca = joblib.load(path)
+        return instance
 
 
 class IsolationForestBaseline:
@@ -248,6 +260,89 @@ def run_all_baselines(save_artifacts: bool = True) -> dict[str, Any]:
     if save_artifacts:
         artifacts_dir = Path(__file__).parent.parent / "artifacts"
         artifacts_dir.mkdir(parents=True, exist_ok=True)
+
+        # 1. Verify refit PCA against baseline_results.json within 1e-6 before saving
+        baseline_file = artifacts_dir / "baseline_results.json"
+        if baseline_file.exists():
+            try:
+                with open(baseline_file, "r", encoding="utf-8") as f:
+                    existing_base = json.load(f)
+                for b in existing_base.get("baselines", []):
+                    if b.get("method") == "PCA_Reconstruction":
+                        for key in ["f1", "threshold", "precision", "recall"]:
+                            diff = abs(float(b.get(key, 0.0)) - float(res_pca.get(key, 0.0)))
+                            if diff > 1e-6:
+                                raise ValueError(
+                                    f"Refit PCA {key} ({res_pca.get(key)}) differs from baseline_results.json "
+                                    f"({b.get(key)}) by {diff:.6e} > 1e-6!"
+                                )
+                        logger.info("Refit PCA verified against baseline_results.json within 1e-6.")
+                        break
+            except Exception as e:
+                logger.error("PCA verification failed: %s", e)
+                raise
+
+        # 2. Save fitted PCA artifact
+        pca_path = artifacts_dir / f"pca_{machine_id}.pkl"
+        pca.save(pca_path)
+        logger.info("Saved fitted PCA model to %s", pca_path)
+
+        # 3. Read LSTM validation p99 for normalization and compute offline ensemble metadata
+        val_p99_lstm = None
+        eval_file = artifacts_dir / "evaluation_results.json"
+        if eval_file.exists():
+            try:
+                with open(eval_file, "r", encoding="utf-8") as f:
+                    eval_data = json.load(f)
+                val_p99_lstm = float(eval_data.get("threshold", 0.0))
+            except Exception as e:
+                logger.warning("Could not load threshold from evaluation_results.json: %s", e)
+
+        val_p99_pca = float(res_pca["threshold"])
+
+        # Compute equal-weight ensemble scores if val_p99_lstm is available
+        ensemble_meta: dict[str, Any] = {
+            "machine_id": machine_id,
+            "val_p99_lstm": val_p99_lstm,
+            "val_p99_pca": val_p99_pca,
+            "weight_lstm": 0.5,
+            "weight_pca": 0.5,
+            "formula": "score_ens = 0.5 * (lstm / val_p99_lstm) + 0.5 * (pca / val_p99_pca)",
+            "pca_components": 10,
+            "note": "Offline LSTM+PCA ensemble. Equal weights fixed in advance.",
+        }
+
+        if val_p99_lstm is not None:
+            # We can also load evaluation errors to compute ensemble threshold & metrics
+            try:
+                # Load pre-saved ensemble evaluation data if available or compute
+                ens_report_file = Path(__file__).parent.parent / "reports" / "ensemble_data.json"
+                if ens_report_file.exists():
+                    with open(ens_report_file, "r", encoding="utf-8") as f:
+                        ens_data = json.load(f)
+                    if "w_0.5" in ens_data:
+                        ensemble_meta["threshold"] = ens_data["w_0.5"]["raw_full"]["threshold"]
+                        ensemble_meta["metrics"] = ens_data["w_0.5"]["raw_full"]
+                        ensemble_meta["heldout_metrics"] = ens_data["w_0.5"]["raw_heldout"]
+                        ensemble_meta["postprocessed_metrics"] = ens_data["w_0.5"]["post_full"]
+                        ensemble_meta["postprocessed_heldout"] = ens_data["w_0.5"]["post_heldout"]
+                        ensemble_meta["weight_sensitivity"] = {
+                            "w_0.25": ens_data["w_0.25"]["raw_full"],
+                            "w_0.5": ens_data["w_0.5"]["raw_full"],
+                            "w_0.75": ens_data["w_0.75"]["raw_full"],
+                        }
+            except Exception as e:
+                logger.warning("Could not attach full metrics to ensemble_meta: %s", e)
+
+        ensemble_file = artifacts_dir / f"ensemble_{machine_id}.json"
+        with open(ensemble_file, "w", encoding="utf-8") as f:
+            json.dump(ensemble_meta, f, indent=2)
+        logger.info("Saved ensemble metadata to %s", ensemble_file)
+
+        # 4. Save baseline_results.json with additive ensemble section
+        if "metrics" in ensemble_meta:
+            out_data["ensemble"] = ensemble_meta
+
         out_file = artifacts_dir / "baseline_results.json"
         with open(out_file, "w", encoding="utf-8") as f:
             json.dump(out_data, f, indent=2)
