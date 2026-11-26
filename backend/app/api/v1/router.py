@@ -11,8 +11,13 @@ from pathlib import Path
 
 import numpy as np
 
-from fastapi import APIRouter, HTTPException, Query, status
+from fastapi import APIRouter, Depends, HTTPException, Query, status
+from sqlalchemy.orm import Session
 
+from app.api.deps import get_current_user
+from app.core.security import create_access_token, get_password_hash, verify_password
+from app.db.models import User
+from app.db.session import get_db
 from app.models.schemas import (
     AnomalyDetectionResponse,
     BatchDetectionRequest,
@@ -22,11 +27,13 @@ from app.models.schemas import (
     ErrorResponse,
     LoginRequest,
     ModelMetadataResponse,
+    RegisterRequest,
     SensorErrorBreakdown,
     SensorWindow,
     StreamDataPoint,
     StreamSeekRequest,
     TokenResponse,
+    UserResponse,
     WindowDetectionResult,
 )
 from app.services.alerting_service import AlertingService
@@ -495,40 +502,108 @@ async def reset_stream():
 
 
 # ═══════════════════════════════════════════════
-# POST /api/v1/auth/login — FR-007
+# Authentication & User Management — FR-007
 # ═══════════════════════════════════════════════
+
+@router.post(
+    "/auth/register",
+    response_model=TokenResponse,
+    status_code=status.HTTP_201_CREATED,
+    responses={
+        409: {"model": ErrorResponse},
+    },
+    summary="Register a new user account",
+)
+async def register(payload: RegisterRequest, db: Session = Depends(get_db)):
+    """
+    Register a new user in the database with salted bcrypt password hash
+    and return an immediate signed JWT access token.
+    """
+    username = payload.username.strip().lower()
+    email = payload.email.strip().lower()
+
+    if db.query(User).filter(User.username == username).first():
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail={"error": "username_taken", "message": f"Username '{username}' is already in use."},
+        )
+
+    if db.query(User).filter(User.email == email).first():
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail={"error": "email_taken", "message": f"Email '{email}' is already in use."},
+        )
+
+    user = User(
+        username=username,
+        email=email,
+        hashed_password=get_password_hash(payload.password),
+        role=payload.role,
+        is_active=True,
+        created_at=datetime.now(timezone.utc),
+        last_login=datetime.now(timezone.utc),
+    )
+    db.add(user)
+    db.commit()
+    db.refresh(user)
+
+    token = create_access_token(subject=user.username, role=user.role, user_id=user.id)
+    return TokenResponse(
+        access_token=token,
+        token_type="bearer",
+        expires_in=28800,
+        user=UserResponse.model_validate(user),
+    )
+
+
 @router.post(
     "/auth/login",
     response_model=TokenResponse,
     responses={401: {"model": ErrorResponse}},
     summary="Login and receive session token",
 )
-async def login(credentials: LoginRequest):
+async def login(credentials: LoginRequest, db: Session = Depends(get_db)):
     """
-    FR-007: Basic Authentication & Session Handling.
-    Validates username and password, returns access token with expiry.
+    FR-007: Database Authentication & Session Handling.
+    Validates username or email with salted bcrypt verification.
+    Returns signed HMAC-SHA256 JWT access token.
     """
-    valid_users = {
-        "admin": "admin",
-        "operator": "operator",
-        "engineer": "engineer",
-    }
-    if credentials.username not in valid_users or valid_users[credentials.username] != credentials.password:
+    login_id = credentials.username.strip().lower()
+
+    user = db.query(User).filter(
+        (User.username == login_id) | (User.email == login_id)
+    ).first()
+
+    if not user or not verify_password(credentials.password, user.hashed_password):
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail={"error": "invalid_credentials", "message": "Invalid username or password."},
         )
 
-    import base64
-    payload = json.dumps({
-        "sub": credentials.username,
-        "role": "admin" if credentials.username == "admin" else "operator",
-        "exp": int(datetime.now(timezone.utc).timestamp()) + 3600 * 8,
-    })
-    token = f"jwt_{base64.urlsafe_b64encode(payload.encode()).decode()}"
+    if not user.is_active:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail={"error": "account_disabled", "message": "Account has been deactivated."},
+        )
 
+    user.last_login = datetime.now(timezone.utc)
+    db.commit()
+
+    token = create_access_token(subject=user.username, role=user.role, user_id=user.id)
     return TokenResponse(
         access_token=token,
         token_type="bearer",
         expires_in=28800,
+        user=UserResponse.model_validate(user),
     )
+
+
+@router.get(
+    "/auth/me",
+    response_model=UserResponse,
+    responses={401: {"model": ErrorResponse}},
+    summary="Get current authenticated user profile",
+)
+async def get_me(current_user: User = Depends(get_current_user)):
+    """Returns the profile and role of the currently logged-in user."""
+    return UserResponse.model_validate(current_user)

@@ -45,6 +45,9 @@ yarn-error.log*
 .env.*.local
 *.pem
 *.key
+*.db
+*.sqlite
+*.sqlite3
 
 # ═══════════════════════════════════════════════
 # Data & Datasets (do NOT commit large data files)

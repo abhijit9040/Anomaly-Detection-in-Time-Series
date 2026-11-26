@@ -15,5 +15,9 @@ pandas>=2.1.0
 scikit-learn>=1.3.0
 scipy>=1.11.0
 
+# Database & ORM
+sqlalchemy>=2.0.0
+psycopg2-binary>=2.9.9
+
 # Utilities
 pyyaml>=6.0.0

@@ -33,13 +33,24 @@ class Settings(BaseSettings):
     scaler_path: str = "../training/artifacts/scaler.pkl"
     threshold_path: str = "../training/artifacts/threshold.json"
 
+    # ── Database ─────────────────────────────────
+    database_url: str = "sqlite:///./app.db"
+
     # ── Auth ─────────────────────────────────────
     secret_key: str = "change-me-in-production-use-a-real-secret"
-    access_token_expire_minutes: int = 30
+    access_token_expire_minutes: int = 480  # 8 hours session
 
     # ── Server ───────────────────────────────────
     host: str = "0.0.0.0"
     port: int = 8000
+
+    @property
+    def sync_database_url(self) -> str:
+        """Format database URL for SQLAlchemy compatibility."""
+        url = self.database_url.strip()
+        if url.startswith("postgres://"):
+            url = url.replace("postgres://", "postgresql://", 1)
+        return url
 
     @property
     def cors_origin_list(self) -> list[str]:

@@ -144,12 +144,36 @@ class LoginRequest(BaseModel):
     password: str
 
 
+class RegisterRequest(BaseModel):
+    """User registration credentials."""
+
+    username: str = Field(min_length=3, max_length=50)
+    email: str = Field(min_length=5, max_length=100)
+    password: str = Field(min_length=4)
+    role: str = Field(default="operator", pattern="^(admin|operator|viewer)$")
+
+
+class UserResponse(BaseModel):
+    """Public user profile data."""
+
+    id: int
+    username: str
+    email: str
+    role: str
+    is_active: bool
+    created_at: datetime
+    last_login: datetime | None = None
+
+    model_config = {"from_attributes": True}
+
+
 class TokenResponse(BaseModel):
     """JWT token response."""
 
     access_token: str
     token_type: str = "bearer"
     expires_in: int = Field(description="Token expiry in seconds")
+    user: UserResponse | None = None
 
 
 # ═══════════════════════════════════════════════

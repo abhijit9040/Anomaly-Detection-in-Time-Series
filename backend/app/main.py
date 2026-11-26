@@ -12,9 +12,15 @@ Main application entry point.
 from __future__ import annotations
 
 import logging
+import sys
 from contextlib import asynccontextmanager
 from datetime import datetime, timezone
 from pathlib import Path
+
+# Ensure backend directory is in sys.path so 'app' can be imported when running from repo root
+_backend_dir = str(Path(__file__).resolve().parent.parent)
+if _backend_dir not in sys.path:
+    sys.path.insert(0, _backend_dir)
 
 from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
@@ -60,6 +66,14 @@ async def lifespan(app: FastAPI):
     project_root = backend_dir.parent
     artifacts_dir = project_root / "training" / "artifacts"
     data_dir = project_root / "data" / "raw"
+
+    # Initialize database schema & seed initial users
+    try:
+        from app.db.session import init_db
+        init_db()
+        logger.info("✅ Database schema initialized & verified")
+    except Exception as e:
+        logger.error("❌ Database initialization error: %s", e)
 
     # Load model
     if model_service.load(artifacts_dir):

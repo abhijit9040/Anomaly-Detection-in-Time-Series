@@ -98,10 +98,25 @@ export const getEvaluationReport = () => apiClient.get('/api/v1/evaluation');
 
 /**
  * Login — FR-007
- * @param {string} username
+ * @param {string} username - username or email
  * @param {string} password
  */
 export const login = (username, password) =>
   apiClient.post('/api/v1/auth/login', { username, password });
+
+/**
+ * Register new user — FR-007
+ * @param {string} username
+ * @param {string} email
+ * @param {string} password
+ * @param {string} [role='operator']
+ */
+export const register = (username, email, password, role = 'operator') =>
+  apiClient.post('/api/v1/auth/register', { username, email, password, role });
+
+/**
+ * Get current authenticated user profile
+ */
+export const getCurrentUser = () => apiClient.get('/api/v1/auth/me');
 
 export default apiClient;
