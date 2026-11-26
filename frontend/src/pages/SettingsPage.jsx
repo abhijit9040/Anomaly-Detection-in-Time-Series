@@ -7,6 +7,7 @@
 
 import { useState, useEffect } from 'react';
 import { checkHealth, getModelMetadata } from '../services/api';
+import { testAudioAlert } from '../utils/audioAlert';
 
 export default function SettingsPage() {
   const [streamSpeed, setStreamSpeed] = useState(
@@ -14,6 +15,9 @@ export default function SettingsPage() {
   );
   const [soundAlerts, setSoundAlerts] = useState(
     () => localStorage.getItem('setting_sound_alerts') === 'true'
+  );
+  const [soundStyle, setSoundStyle] = useState(
+    () => localStorage.getItem('setting_sound_style') || 'industrial'
   );
   const [healthData, setHealthData] = useState(null);
   const [modelMeta, setModelMeta] = useState(null);
@@ -37,6 +41,7 @@ export default function SettingsPage() {
   const handleSave = () => {
     localStorage.setItem('setting_stream_speed', streamSpeed);
     localStorage.setItem('setting_sound_alerts', soundAlerts.toString());
+    localStorage.setItem('setting_sound_style', soundStyle);
     setSavedNotice(true);
     setTimeout(() => setSavedNotice(false), 2500);
   };
@@ -90,15 +95,48 @@ export default function SettingsPage() {
 
               <div className="form-group" style={{ marginBottom: '20px' }}>
                 <label className="form-label">Audio Alerts</label>
-                <label style={{ display: 'flex', alignItems: 'center', gap: '10px', cursor: 'pointer', fontSize: '13px', color: 'var(--text-primary)' }}>
-                  <input
-                    type="checkbox"
-                    checked={soundAlerts}
-                    onChange={e => setSoundAlerts(e.target.checked)}
-                    style={{ width: '16px', height: '16px', accentColor: '#6366f1' }}
-                  />
-                  <span>Play audible alert chime when reconstruction error crosses threshold</span>
-                </label>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                  <label style={{ display: 'flex', alignItems: 'center', gap: '10px', cursor: 'pointer', fontSize: '13px', color: 'var(--text-primary)' }}>
+                    <input
+                      type="checkbox"
+                      checked={soundAlerts}
+                      onChange={e => setSoundAlerts(e.target.checked)}
+                      style={{ width: '16px', height: '16px', accentColor: '#6366f1' }}
+                    />
+                    <span>Play audible alert chime when reconstruction error crosses threshold</span>
+                  </label>
+
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '10px', flexWrap: 'wrap' }}>
+                    <div style={{ flex: 1, minWidth: '220px' }}>
+                      <select
+                        className="form-input"
+                        value={soundStyle}
+                        onChange={e => {
+                          setSoundStyle(e.target.value);
+                          testAudioAlert(e.target.value);
+                        }}
+                        style={{ fontSize: '13px', padding: '8px 12px' }}
+                      >
+                        <option value="industrial">⚡ Industrial Pulse (SCADA Warning - Default)</option>
+                        <option value="siren">🚨 Critical Siren (High Urgency Warble)</option>
+                        <option value="sonar">📡 Sonar Ping (Aerospace Telemetry)</option>
+                        <option value="chime">🔔 Soft Chime (Gentle Dual Tone)</option>
+                      </select>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => testAudioAlert(soundStyle)}
+                      className="hdr-btn"
+                      style={{ padding: '8px 14px', fontSize: '12px' }}
+                      title="Test selected alert sound"
+                    >
+                      🔊 Test Audio
+                    </button>
+                  </div>
+                  <div style={{ fontSize: '11px', color: 'var(--text-muted)' }}>
+                    Changing the sound style automatically plays a preview.
+                  </div>
+                </div>
               </div>
 
               <div style={{ display: 'flex', gap: '10px' }}>
