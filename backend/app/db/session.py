@@ -40,6 +40,15 @@ def get_engine():
             separator = "&" if "?" in clean_url else "?"
             clean_url = f"{clean_url}{separator}sslmode=require"
 
+        # SQLAlchemy 2.1+ changed the default PostgreSQL driver from psycopg2 to
+        # psycopg (v3). We ship psycopg2-binary, so explicitly force +psycopg2
+        # dialect to avoid "No module named 'psycopg'" on deploy.
+        clean_url = re.sub(
+            r"^postgresql(\+[^:]+)?://",
+            "postgresql+psycopg2://",
+            clean_url,
+        )
+
         raw_url = clean_url
         engine_kwargs["pool_pre_ping"] = True   # Automatically test connections on checkout (vital for Neon)
         engine_kwargs["pool_recycle"] = 300     # Recycle connections every 5 minutes
