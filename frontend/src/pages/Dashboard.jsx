@@ -8,8 +8,10 @@ import { useState, useEffect, useRef, useCallback } from 'react';
 import Plot from 'react-plotly.js';
 import { checkHealth, getStreamData, detectBatch, getDemoWindows, jumpToAnomaly, injectAnomaly, resetStream, getModelMetadata } from '../services/api';
 import { advanceAlertState, initialAlertState } from '../utils/alertEvents';
+import ChartModal from '../components/ChartModal';
+import ChannelDetailModal from '../components/ChannelDetailModal';
 
-const MAX_POINTS = 200;
+const MAX_POINTS = 300;
 
 export default function Dashboard() {
   const [health, setHealth] = useState(null);
@@ -23,6 +25,8 @@ export default function Dashboard() {
   const [sensor0, setSensor0] = useState([]);
   const [sensor1, setSensor1] = useState([]);
   const [sensor2, setSensor2] = useState([]);
+  const [sensorValues, setSensorValues] = useState({});
+  const [channelErrors, setChannelErrors] = useState({});
   const [anomalyCount, setAnomalyCount] = useState(0);
   const [lastError, setLastError] = useState(null);
   const [streaming, setStreaming] = useState(false);
@@ -31,6 +35,10 @@ export default function Dashboard() {
   const [currentTimestep, setCurrentTimestep] = useState(null);
   const [streamNotice, setStreamNotice] = useState(null);
   const [actionLoading, setActionLoading] = useState(false);
+
+  // Modal states
+  const [maximizedChart, setMaximizedChart] = useState(null); // 'sensor_ts' | 'recon_error' | null
+  const [detailChannel, setDetailChannel] = useState(null); // channel index or null
 
   // Batch inference state (FR-012)
   const [batchResults, setBatchResults] = useState(null);
@@ -77,6 +85,28 @@ export default function Dashboard() {
       setSensor0(prev => [...prev.slice(-MAX_POINTS), d.sensor_values[0]]);
       setSensor1(prev => [...prev.slice(-MAX_POINTS), d.sensor_values[1]]);
       setSensor2(prev => [...prev.slice(-MAX_POINTS), d.sensor_values[2]]);
+
+      if (d.sensor_values) {
+        setSensorValues(prev => {
+          const next = { ...prev };
+          d.sensor_values.forEach((val, idx) => {
+            const arr = next[idx] || [];
+            next[idx] = [...arr.slice(-MAX_POINTS), val];
+          });
+          return next;
+        });
+      }
+
+      if (d.sensor_errors) {
+        setChannelErrors(prev => {
+          const next = { ...prev };
+          d.sensor_errors.forEach(errObj => {
+            const arr = next[errObj.sensor_index] || [];
+            next[errObj.sensor_index] = [...arr.slice(-MAX_POINTS), errObj.reconstruction_error];
+          });
+          return next;
+        });
+      }
 
       if (d.timestep !== undefined && d.timestep !== null) {
         setCurrentTimestep(d.timestep);
@@ -382,10 +412,29 @@ export default function Dashboard() {
 
         {/* ── Charts ── */}
         <div className="charts-grid">
-          <div className="chart-container">
+          <div
+            className="chart-container chart-card-clickable"
+            onClick={() => setMaximizedChart('sensor_ts')}
+            title="Click anywhere to maximize Sensor Time Series"
+          >
             <div className="card-header">
-              <div className="card-title">Sensor Time Series</div>
-              <div className="card-subtitle">Live multi-sensor data (Sensors 00, 01, 02)</div>
+              <div>
+                <div className="card-title">Sensor Time Series</div>
+                <div className="card-subtitle">Live multi-sensor data (Sensors 00, 01, 02)</div>
+              </div>
+              <div className="chart-header-actions">
+                <button
+                  type="button"
+                  className="chart-expand-btn"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    setMaximizedChart('sensor_ts');
+                  }}
+                  title="Maximize chart (Click to expand)"
+                >
+                  ⛶ Maximize
+                </button>
+              </div>
             </div>
             {sensor0.length > 0 ? (
               <Plot
@@ -397,11 +446,11 @@ export default function Dashboard() {
                 layout={{
                   paper_bgcolor: 'transparent', plot_bgcolor: 'transparent',
                   font: { color: '#94a3b8', size: 11 },
-                  xaxis: { showgrid: false, zeroline: false },
-                  yaxis: { gridcolor: 'rgba(255,255,255,0.05)', zeroline: false },
-                  margin: { t: 10, b: 40, l: 50, r: 10 },
+                  xaxis: { showgrid: false, zeroline: false, automargin: true, nticks: 6, tickangle: 0 },
+                  yaxis: { gridcolor: 'rgba(255,255,255,0.05)', zeroline: false, automargin: true },
+                  margin: { t: 15, b: 65, l: 50, r: 15 },
                   showlegend: true,
-                  legend: { orientation: 'h', y: -0.15 },
+                  legend: { orientation: 'h', x: 0.5, xanchor: 'center', y: -0.25, yanchor: 'top', font: { size: 10 } },
                 }}
                 config={{ displayModeBar: false, responsive: true }}
                 style={{ width: '100%', height: '260px' }}
@@ -415,10 +464,29 @@ export default function Dashboard() {
             )}
           </div>
 
-          <div className="chart-container">
+          <div
+            className="chart-container chart-card-clickable"
+            onClick={() => setMaximizedChart('recon_error')}
+            title="Click anywhere to maximize Reconstruction Error"
+          >
             <div className="card-header">
-              <div className="card-title">Reconstruction Error</div>
-              <div className="card-subtitle">Raw & smoothed (k=5) anomaly scores vs threshold</div>
+              <div>
+                <div className="card-title">Reconstruction Error</div>
+                <div className="card-subtitle">Raw & smoothed (k=5) anomaly scores vs threshold</div>
+              </div>
+              <div className="chart-header-actions">
+                <button
+                  type="button"
+                  className="chart-expand-btn"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    setMaximizedChart('recon_error');
+                  }}
+                  title="Maximize chart (Click to expand)"
+                >
+                  ⛶ Maximize
+                </button>
+              </div>
             </div>
             {reconErrors.length > 0 ? (
               <Plot
@@ -450,11 +518,11 @@ export default function Dashboard() {
                 layout={{
                   paper_bgcolor: 'transparent', plot_bgcolor: 'transparent',
                   font: { color: '#94a3b8', size: 11 },
-                  xaxis: { showgrid: false, zeroline: false },
-                  yaxis: { gridcolor: 'rgba(255,255,255,0.05)', zeroline: false },
-                  margin: { t: 10, b: 40, l: 55, r: 10 },
+                  xaxis: { showgrid: false, zeroline: false, automargin: true, nticks: 6, tickangle: 0 },
+                  yaxis: { gridcolor: 'rgba(255,255,255,0.05)', zeroline: false, automargin: true },
+                  margin: { t: 15, b: 65, l: 55, r: 15 },
                   showlegend: true,
-                  legend: { orientation: 'h', y: -0.15 },
+                  legend: { orientation: 'h', x: 0.5, xanchor: 'center', y: -0.25, yanchor: 'top', font: { size: 10 } },
                 }}
                 config={{ displayModeBar: false, responsive: true }}
                 style={{ width: '100%', height: '260px' }}
@@ -478,15 +546,35 @@ export default function Dashboard() {
                 <div className="card-subtitle">Highest error contributing sensor channels for active window</div>
               </div>
               <span style={{ fontSize: '12px', color: '#6366f1', fontWeight: 600 }}>
-                Top 3 Channels
+                Top 3 Channels (Click to inspect)
               </span>
             </div>
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '14px', padding: '0 20px 20px' }}>
               {topRootCauses.map((item, i) => (
-                <div key={i} style={{ background: 'rgba(255,255,255,0.02)', border: '1px solid rgba(255,255,255,0.06)', borderRadius: '10px', padding: '12px 16px' }}>
+                <div
+                  key={i}
+                  onClick={() => setDetailChannel(item.sensor_index)}
+                  title={`Click to view deep dive for ${item.sensor_name}`}
+                  style={{
+                    background: 'rgba(255,255,255,0.02)',
+                    border: '1px solid rgba(255,255,255,0.06)',
+                    borderRadius: '10px',
+                    padding: '12px 16px',
+                    cursor: 'pointer',
+                    transition: 'all 0.15s ease',
+                  }}
+                  onMouseEnter={(e) => {
+                    e.currentTarget.style.borderColor = 'rgba(99,102,241,0.5)';
+                    e.currentTarget.style.transform = 'translateY(-2px)';
+                  }}
+                  onMouseLeave={(e) => {
+                    e.currentTarget.style.borderColor = 'rgba(255,255,255,0.06)';
+                    e.currentTarget.style.transform = 'translateY(0)';
+                  }}
+                >
                   <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '6px' }}>
                     <span style={{ fontSize: '13px', fontWeight: 600, color: 'var(--text-primary)' }}>
-                      #{i + 1} {item.sensor_name}
+                      #{i + 1} {item.sensor_name} 🔍
                     </span>
                     <span style={{ fontSize: '12px', color: item.reconstruction_error > threshold.current ? '#ef4444' : '#10b981', fontWeight: 600 }}>
                       err: {item.reconstruction_error.toFixed(4)}
@@ -675,7 +763,18 @@ export default function Dashboard() {
                       <td style={{ padding: '8px 12px' }}>{a.time}</td>
                       <td style={{ padding: '8px 12px', color: '#ef4444', fontWeight: 600 }}>{a.error}</td>
                       <td style={{ padding: '8px 12px' }}>{a.threshold}</td>
-                      <td style={{ padding: '8px 12px', color: '#f59e0b', fontFamily: 'monospace' }}>{a.topSensor}</td>
+                      <td
+                        style={{ padding: '8px 12px', color: '#f59e0b', fontFamily: 'monospace', cursor: 'pointer' }}
+                        title="Click to view channel deep dive"
+                        onClick={() => {
+                          const match = a.topSensor?.match(/sensor_(\d+)/i) || a.topSensor?.match(/ch-?(\d+)/i);
+                          if (match) {
+                            setDetailChannel(parseInt(match[1], 10));
+                          }
+                        }}
+                      >
+                        {a.topSensor} 🔍
+                      </td>
                       <td style={{ padding: '8px 12px' }}>
                         <span style={{ background: 'rgba(239,68,68,0.15)', color: '#ef4444', padding: '2px 10px', borderRadius: '20px', fontSize: '11px', fontWeight: 600 }}>
                           ⚠ ANOMALY
@@ -689,6 +788,81 @@ export default function Dashboard() {
           )}
         </div>
       </div>
+
+      {/* ── Maximized Chart Modals ── */}
+      <ChartModal
+        isOpen={maximizedChart === 'sensor_ts'}
+        onClose={() => setMaximizedChart(null)}
+        title="Sensor Time Series (Multi-Sensor Telemetry)"
+        subtitle="Real-time multi-sensor values (Sensors 00, 01, 02) with live streaming updates"
+        plotData={[
+          { x: timestamps, y: sensor0, mode: 'lines', name: 'Sensor 00', line: { color: '#6366f1', width: 2 } },
+          { x: timestamps, y: sensor1, mode: 'lines', name: 'Sensor 01', line: { color: '#10b981', width: 2 } },
+          { x: timestamps, y: sensor2, mode: 'lines', name: 'Sensor 02', line: { color: '#f59e0b', width: 2 } },
+        ]}
+        plotLayout={{
+          hovermode: 'x unified',
+          xaxis: { title: 'Timestamp' },
+          yaxis: { title: 'Normalized Sensor Value' },
+        }}
+      />
+
+      <ChartModal
+        isOpen={maximizedChart === 'recon_error'}
+        onClose={() => setMaximizedChart(null)}
+        title="Reconstruction Error & Anomaly Detection"
+        subtitle="Raw error, smoothed error (k=5), decision threshold cutoff, and flagged anomaly timestamps"
+        plotData={[
+          {
+            x: timestamps.slice(-reconErrors.length),
+            y: reconErrors,
+            mode: 'lines',
+            name: 'Raw Error',
+            line: { color: 'rgba(99,102,241,0.45)', width: 1.5 },
+          },
+          {
+            x: timestamps.slice(-smoothedErrors.length),
+            y: smoothedErrors,
+            mode: 'lines',
+            name: 'Smoothed Error (k=5)',
+            line: { color: '#6366f1', width: 2.5 },
+            fill: 'tozeroy',
+            fillcolor: 'rgba(99,102,241,0.1)',
+          },
+          {
+            x: [timestamps[Math.max(0, timestamps.length - reconErrors.length)], timestamps[timestamps.length - 1]],
+            y: [threshold.current, threshold.current],
+            mode: 'lines',
+            name: 'Threshold',
+            line: { color: '#ef4444', width: 2, dash: 'dash' },
+          },
+          {
+            x: timestamps.slice(-reconErrors.length).filter((_, i) => anomalyFlags[i]),
+            y: reconErrors.filter((_, i) => anomalyFlags[i]),
+            mode: 'markers',
+            name: 'Anomaly Flag',
+            marker: { color: '#ef4444', size: 9, symbol: 'circle' },
+          },
+        ]}
+        plotLayout={{
+          hovermode: 'x unified',
+          xaxis: { title: 'Timestamp' },
+          yaxis: { title: 'Reconstruction Error (MSE)' },
+        }}
+      />
+
+      {/* ── Channel Detail Modal ── */}
+      <ChannelDetailModal
+        isOpen={detailChannel !== null}
+        onClose={() => setDetailChannel(null)}
+        channelIndex={detailChannel ?? 0}
+        onSelectChannel={(idx) => setDetailChannel(idx)}
+        timestamps={timestamps}
+        sensorValues={sensorValues}
+        channelErrors={channelErrors}
+        threshold={threshold.current}
+        totalChannels={meta?.n_features ?? 38}
+      />
     </>
   );
 }
