@@ -23,7 +23,7 @@ export default function ChannelDetailModal({
   timestamps = [],
   sensorValues = {},
   channelErrors = {},
-  threshold = 0.5,
+  threshold,
   totalChannels = 38,
 }) {
   const modalRef = useRef(null);
@@ -109,16 +109,18 @@ export default function ChannelDetailModal({
     return calculateCausalSmoothedErrors(visibleErrors, 5);
   }, [visibleErrors]);
 
+  const thresholdLoaded = typeof threshold === 'number' && Number.isFinite(threshold);
+
   // Statistics across the visible window
   const stats = useMemo(() => {
-    return calculateWindowStats(visibleValues, visibleErrors, threshold);
-  }, [visibleValues, visibleErrors, threshold]);
+    return calculateWindowStats(visibleValues, visibleErrors, thresholdLoaded ? threshold : null);
+  }, [visibleValues, visibleErrors, threshold, thresholdLoaded]);
 
   if (!isOpen) return null;
 
   const currentVal = rawValues.length > 0 ? rawValues[rawValues.length - 1] : null;
   const currentErr = rawErrors.length > 0 ? rawErrors[rawErrors.length - 1] : null;
-  const isElevated = currentErr !== null && currentErr > threshold;
+  const isElevated = thresholdLoaded && currentErr !== null && currentErr > threshold;
   const channelName = `Sensor ${channelIndex < 10 ? `0${channelIndex}` : channelIndex}`;
 
   const prevChannel = (channelIndex - 1 + totalChannels) % totalChannels;
@@ -127,12 +129,14 @@ export default function ChannelDetailModal({
   // Anomaly marker timestamps and values
   const anomalyTimestamps = [];
   const anomalyPoints = [];
-  visibleErrors.forEach((err, idx) => {
-    if (err > threshold && idx < visibleTimestamps.length) {
-      anomalyTimestamps.push(visibleTimestamps[idx]);
-      anomalyPoints.push(err);
-    }
-  });
+  if (thresholdLoaded) {
+    visibleErrors.forEach((err, idx) => {
+      if (err > threshold && idx < visibleTimestamps.length) {
+        anomalyTimestamps.push(visibleTimestamps[idx]);
+        anomalyPoints.push(err);
+      }
+    });
+  }
 
   return (
     <div
@@ -219,7 +223,7 @@ export default function ChannelDetailModal({
             </div>
             <div className="channel-metric-cell">
               <span className="channel-metric-label">Threshold Cutoff</span>
-              <span className="channel-metric-val" style={{ color: '#38bdf8' }}>{threshold.toFixed(4)}</span>
+              <span className="channel-metric-val" style={{ color: '#38bdf8' }}>{thresholdLoaded ? threshold.toFixed(4) : 'loading…'}</span>
             </div>
             <div className="channel-metric-cell">
               <span className="channel-metric-label">Anomalies in Window</span>
@@ -334,20 +338,20 @@ export default function ChannelDetailModal({
                       fill: 'tozeroy',
                       fillcolor: 'rgba(139,92,246,0.08)',
                     },
-                    {
+                    ...(thresholdLoaded && visibleTimestamps.length > 0 ? [{
                       x: [visibleTimestamps[0], visibleTimestamps[visibleTimestamps.length - 1]],
                       y: [threshold, threshold],
                       mode: 'lines',
                       name: 'Threshold',
                       line: { color: '#ef4444', width: 1.8, dash: 'dash' },
-                    },
-                    {
+                    }] : []),
+                    ...(thresholdLoaded && anomalyTimestamps.length > 0 ? [{
                       x: anomalyTimestamps,
                       y: anomalyPoints,
                       mode: 'markers',
                       name: 'Anomaly Flag',
                       marker: { color: '#ef4444', size: 7, symbol: 'circle' },
-                    },
+                    }] : []),
                   ]}
                   layout={{
                     autosize: true,
@@ -369,14 +373,14 @@ export default function ChannelDetailModal({
                       zeroline: false,
                       automargin: true,
                     },
-                    margin: { t: 20, b: 50, l: 50, r: 15 },
+                    margin: { t: 30, b: 40, l: 50, r: 15 },
                     showlegend: true,
                     legend: {
                       orientation: 'h',
-                      x: 0.5,
-                      xanchor: 'center',
-                      y: -0.22,
-                      yanchor: 'top',
+                      x: 1,
+                      xanchor: 'right',
+                      y: 1.15,
+                      yanchor: 'bottom',
                       font: { size: 10, color: '#94a3b8' },
                     },
                   }}

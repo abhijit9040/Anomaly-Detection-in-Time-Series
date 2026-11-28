@@ -1,14 +1,4 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-
-// Provide a mock localStorage for node test runner
-const storage = {};
-globalThis.localStorage = {
-  getItem: (key) => storage[key] ?? null,
-  setItem: (key, val) => { storage[key] = String(val); },
-  removeItem: (key) => { delete storage[key]; },
-  clear: () => { Object.keys(storage).forEach(k => delete storage[k]); }
-};
-
 import { playAnomalyAlert, testAudioAlert, unlockAudio } from './audioAlert';
 
 describe('audioAlert', () => {

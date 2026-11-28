@@ -123,6 +123,7 @@ class StreamDataPoint(BaseModel):
     reconstruction_error: float | None = None
     smoothed_error: float | None = None
     alert_active: bool | None = None
+    threshold: float | None = None
     sensor_errors: list[SensorErrorBreakdown] | None = None
     timestep: int | None = None
     ground_truth_label: int | None = None

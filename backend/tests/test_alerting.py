@@ -83,15 +83,26 @@ async def test_stream_endpoint_additive_fields():
     async with AsyncClient(transport=transport, base_url="http://test") as client:
         # Load stream test data if not loaded
         from app.services.stream_service import stream_service
+        from app.services.model_service import model_service
         if stream_service.test_data is None:
             data_dir = project_root / "data" / "raw"
             stream_service.load(data_dir, machine_id="machine-1-1")
+        was_loaded = model_service.is_loaded
+        if not was_loaded:
+            model_service.load(project_root / "training" / "artifacts")
 
-        response = await client.get("/api/v1/stream")
-        assert response.status_code == 200
-        data = response.json()
-        assert "smoothed_error" in data
-        assert "alert_active" in data
-        assert "reconstruction_error" in data
-        assert "is_anomaly" in data
-        assert "sensor_values" in data
+        try:
+            response = await client.get("/api/v1/stream")
+            assert response.status_code == 200
+            data = response.json()
+            assert "smoothed_error" in data
+            assert "alert_active" in data
+            assert "reconstruction_error" in data
+            assert "threshold" in data
+            assert isinstance(data["threshold"], float)
+            assert data["threshold"] > 0
+            assert "is_anomaly" in data
+            assert "sensor_values" in data
+        finally:
+            if not was_loaded:
+                model_service.is_loaded = False

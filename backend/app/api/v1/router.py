@@ -412,6 +412,11 @@ async def get_stream_data():
     alert_active = None
     is_anomaly = None
     sensor_errors = None
+    threshold_val = (
+        round(float(model_service.threshold), 6)
+        if (model_service.is_loaded and model_service.threshold is not None)
+        else None
+    )
 
     if model_service.is_loaded and stream_service.test_data is not None:
         try:
@@ -450,6 +455,7 @@ async def get_stream_data():
         reconstruction_error=reconstruction_error,
         smoothed_error=smoothed_error,
         alert_active=alert_active,
+        threshold=threshold_val,
         sensor_errors=sensor_errors,
         timestep=point.get("timestep"),
         ground_truth_label=point.get("ground_truth_label"),

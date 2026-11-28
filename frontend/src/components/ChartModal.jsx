@@ -23,6 +23,7 @@ export default function ChartModal({
   plotData,
   plotLayout = {},
   plotConfig = {},
+  threshold,
   onResetZoom,
 }) {
   const modalRef = useRef(null);
@@ -100,16 +101,16 @@ export default function ChartModal({
       showlegend: plotLayout.showlegend ?? true,
       legend: {
         orientation: 'h',
-        x: 0.5,
-        xanchor: 'center',
-        y: -0.20,
-        yanchor: 'top',
+        x: 1,
+        xanchor: 'right',
+        y: 1.10,
+        yanchor: 'bottom',
         font: { size: 12, color: '#cbd5e1' },
         ...plotLayout.legend,
       },
       margin: {
-        t: 25,
-        b: 90,
+        t: 45,
+        b: 60,
         l: Math.max(70, plotLayout.margin?.l || 50),
         r: Math.max(30, plotLayout.margin?.r || 15),
         ...plotLayout.margin,

@@ -38,7 +38,7 @@ describe('calculateWindowStats', () => {
   it('computes correct min, max, mean, std, and anomaly counts', () => {
     const values = [10, 20, 30, 40, 50];
     const errors = [0.1, 0.6, 0.2, 0.8, 0.3];
-    const threshold = 0.5;
+    const threshold = 0.4;
 
     const stats = calculateWindowStats(values, errors, threshold);
     expect(stats.min).toBe(10);

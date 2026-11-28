@@ -12,6 +12,7 @@ import {
 import { checkHealth, getStreamData, detectBatch, getDemoWindows, jumpToAnomaly, injectAnomaly, resetStream, getModelMetadata } from '../services/api';
 import { advanceAlertState, initialAlertState } from '../utils/alertEvents';
 import { playAnomalyAlert, unlockAudio } from '../utils/audioAlert';
+import { useModelThreshold } from '../hooks/useModelThreshold';
 import ChartModal from '../components/ChartModal';
 import ChannelDetailModal from '../components/ChannelDetailModal';
 
@@ -197,7 +198,7 @@ export default function Dashboard() {
   const [meta, setMeta] = useState(null);
   const [lastStreamPoint, setLastStreamPoint] = useState(null);
 
-  const threshold = useRef(0.5);
+  const { threshold, loaded: thresholdLoaded, updateFromStream } = useModelThreshold();
   const streamRef = useRef(null);
   const alertStateRef = useRef(initialAlertState);
 
@@ -226,7 +227,6 @@ export default function Dashboard() {
     getModelMetadata()
       .then(res => {
         setMeta(res.data);
-        if (res.data?.threshold) threshold.current = res.data.threshold;
       })
       .catch(() => {});
     const id = setInterval(poll, 10000);
@@ -237,6 +237,9 @@ export default function Dashboard() {
     try {
       const res = await getStreamData();
       const d = res.data;
+      if (d.threshold != null) {
+        updateFromStream(d.threshold);
+      }
       setLastStreamPoint(d);
       const now = new Date().toLocaleTimeString();
 
@@ -289,6 +292,9 @@ export default function Dashboard() {
         const topSensor = top3[0]
           ? `${top3[0].sensor_name} (${top3[0].reconstruction_error.toFixed(3)})`
           : 'Ch-00';
+        const recordedThreshold = thresholdLoaded && threshold !== null
+          ? threshold.toFixed(4)
+          : (d.threshold != null ? Number(d.threshold).toFixed(4) : 'loading…');
 
         if (step.isNewEvent) {
           setAnomalyCount(c => c + 1);
@@ -297,13 +303,13 @@ export default function Dashboard() {
           playAnomalyAlert();
           setRecentAlerts(prev => [{
             time: now, error: err.toFixed(4), errorNum: err,
-            threshold: threshold.current.toFixed(4), topSensor,
+            threshold: recordedThreshold, topSensor,
           }, ...prev.slice(0, 9)]);
         } else if (d.is_anomaly) {
           setLastAnomalyAgo(0);
           setRecentAlerts(prev =>
             prev.length && err > prev[0].errorNum
-              ? [{ ...prev[0], error: err.toFixed(4), errorNum: err, topSensor }, ...prev.slice(1)]
+              ? [{ ...prev[0], error: err.toFixed(4), errorNum: err, threshold: prev[0].threshold === 'loading…' ? recordedThreshold : prev[0].threshold, topSensor }, ...prev.slice(1)]
               : prev
           );
         }
@@ -414,8 +420,8 @@ export default function Dashboard() {
   };
 
   const modelLoaded = health?.model_loaded;
-  const systemStatus = computeSystemStatus(lastError, threshold.current);
-  const pct = pctDiff(lastError, threshold.current);
+  const systemStatus = thresholdLoaded && threshold !== null ? computeSystemStatus(lastError, threshold) : 'normal';
+  const pct = thresholdLoaded && threshold !== null ? pctDiff(lastError, threshold) : null;
   const pctLabel = pct === null ? '' : pct >= 0 ? `+${pct.toFixed(1)}% over threshold` : `${Math.abs(pct).toFixed(1)}% under threshold`;
 
   // ── Sensor time series plot data ────────────────────────────────────────
@@ -437,19 +443,35 @@ export default function Dashboard() {
       line: { color: '#6366f1', width: 2.2 },
       fill: 'tozeroy', fillcolor: 'rgba(99,102,241,0.08)',
     },
-    {
+  ];
+
+  if (thresholdLoaded && threshold !== null && reconXslice.length > 0) {
+    reconPlotData.push({
       x: [reconXslice[0] ?? timestamps[0], timestamps[timestamps.length - 1]],
-      y: [threshold.current, threshold.current],
+      y: [threshold, threshold],
       mode: 'lines', name: 'Threshold',
       line: { color: '#ef4444', width: 2, dash: 'dash' },
-    },
-    {
-      x: reconXslice.filter((_, i) => anomalyFlags[i]),
-      y: reconErrors.filter((_, i) => anomalyFlags[i]),
-      mode: 'markers', name: 'Anomaly',
-      marker: { color: '#ef4444', size: 7, symbol: 'circle' },
-    },
-  ];
+    });
+  }
+
+  if (thresholdLoaded && threshold !== null) {
+    const anomalyX = [];
+    const anomalyY = [];
+    reconXslice.forEach((ts, i) => {
+      if (anomalyFlags[i]) {
+        anomalyX.push(ts);
+        anomalyY.push(reconErrors[i]);
+      }
+    });
+    if (anomalyX.length > 0) {
+      reconPlotData.push({
+        x: anomalyX,
+        y: anomalyY,
+        mode: 'markers', name: 'Anomaly Flag',
+        marker: { color: '#ef4444', size: 7, symbol: 'circle' },
+      });
+    }
+  }
 
   return (
     <>
@@ -554,7 +576,13 @@ export default function Dashboard() {
             </div>
 
             <div className="metric-change" style={{ color: 'var(--text-muted)', display: 'flex', justifyContent: 'space-between', flexWrap: 'wrap', gap: '4px', marginTop: '6px' }}>
-              <span>Threshold: <strong style={{ color: '#ef4444' }}>{threshold.current.toFixed(4)}</strong></span>
+              <span>
+                Threshold: {thresholdLoaded && threshold !== null ? (
+                  <strong style={{ color: '#ef4444' }}>{threshold.toFixed(4)}</strong>
+                ) : (
+                  <strong style={{ color: 'var(--text-muted)' }}>loading…</strong>
+                )}
+              </span>
               {pctLabel && (
                 <span style={{ color: systemStatus === 'anomaly' ? '#ef4444' : systemStatus === 'warning' ? '#f59e0b' : '#10b981', fontWeight: 600 }}>
                   {pctLabel}
@@ -684,7 +712,11 @@ export default function Dashboard() {
             {reconErrors.length > 0 ? (
               <Plot
                 data={reconPlotData}
-                layout={{ ...CHART_LAYOUT_BASE }}
+                layout={{
+                  ...CHART_LAYOUT_BASE,
+                  legend: { orientation: 'h', x: 1, xanchor: 'right', y: 1.14, yanchor: 'bottom', font: { size: 10 } },
+                  margin: { t: 30, b: 40, l: 52, r: 12 },
+                }}
                 config={{ displayModeBar: false, responsive: true }}
                 style={{ width: '100%', height: '260px' }}
               />
@@ -729,15 +761,15 @@ export default function Dashboard() {
                     <span style={{ fontSize: '13px', fontWeight: 600, color: 'var(--text-primary)' }}>
                       #{i + 1} {item.sensor_name}
                     </span>
-                    <span style={{ fontSize: '12px', color: item.reconstruction_error > threshold.current ? '#ef4444' : '#10b981', fontWeight: 600, fontVariantNumeric: 'tabular-nums' }}>
+                    <span style={{ fontSize: '12px', color: (thresholdLoaded && threshold !== null && item.reconstruction_error > threshold) ? '#ef4444' : '#10b981', fontWeight: 600, fontVariantNumeric: 'tabular-nums' }}>
                       {item.reconstruction_error.toFixed(4)}
                     </span>
                   </div>
                   <div style={{ height: '6px', background: 'rgba(255,255,255,0.06)', borderRadius: '3px', overflow: 'hidden' }}>
                     <div style={{
-                      width: `${Math.min(100, (item.reconstruction_error / (threshold.current * 1.5)) * 100)}%`,
+                      width: `${Math.min(100, (thresholdLoaded && threshold !== null ? (item.reconstruction_error / (threshold * 1.5)) * 100 : 50))}%`,
                       height: '100%',
-                      background: item.reconstruction_error > threshold.current ? '#ef4444' : '#6366f1',
+                      background: (thresholdLoaded && threshold !== null && item.reconstruction_error > threshold) ? '#ef4444' : '#6366f1',
                       borderRadius: '3px',
                     }} />
                   </div>
@@ -888,15 +920,17 @@ export default function Dashboard() {
       <ChartModal
         isOpen={maximizedChart === 'recon_error'}
         onClose={() => setMaximizedChart(null)}
+        threshold={threshold}
         title="Reconstruction Error & Anomaly Detection"
         subtitle="Raw error, smoothed error (k=5), decision threshold cutoff, and flagged anomaly timestamps"
-        plotData={[
-          { x: timestamps.slice(-reconErrors.length), y: reconErrors, mode: 'lines', name: 'Raw Error', line: { color: 'rgba(99,102,241,0.45)', width: 1.5 } },
-          { x: timestamps.slice(-smoothedErrors.length), y: smoothedErrors, mode: 'lines', name: 'Smoothed Error (k=5)', line: { color: '#6366f1', width: 2.5 }, fill: 'tozeroy', fillcolor: 'rgba(99,102,241,0.1)' },
-          { x: [timestamps[Math.max(0, timestamps.length - reconErrors.length)], timestamps[timestamps.length - 1]], y: [threshold.current, threshold.current], mode: 'lines', name: 'Threshold', line: { color: '#ef4444', width: 2, dash: 'dash' } },
-          { x: timestamps.slice(-reconErrors.length).filter((_, i) => anomalyFlags[i]), y: reconErrors.filter((_, i) => anomalyFlags[i]), mode: 'markers', name: 'Anomaly Flag', marker: { color: '#ef4444', size: 9, symbol: 'circle' } },
-        ]}
-        plotLayout={{ hovermode: 'x unified', xaxis: { title: 'Timestamp' }, yaxis: { title: 'Reconstruction Error (MSE)' } }}
+        plotData={reconPlotData}
+        plotLayout={{
+          hovermode: 'x unified',
+          xaxis: { title: 'Timestamp' },
+          yaxis: { title: 'Reconstruction Error (MSE)' },
+          legend: { orientation: 'h', x: 1, xanchor: 'right', y: 1.10, yanchor: 'bottom' },
+          margin: { t: 45, b: 60, l: 70, r: 25 },
+        }}
       />
 
       {/* ── Channel Detail Modal ── */}
@@ -908,7 +942,7 @@ export default function Dashboard() {
         timestamps={timestamps}
         sensorValues={sensorValues}
         channelErrors={channelErrors}
-        threshold={threshold.current}
+        threshold={threshold}
         totalChannels={meta?.n_features ?? 38}
       />
     </>

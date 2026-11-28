@@ -8,6 +8,7 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
 import Plot from 'react-plotly.js';
 import { getStreamData, checkHealth, getModelMetadata } from '../services/api';
+import { useModelThreshold } from '../hooks/useModelThreshold';
 import ChartModal from '../components/ChartModal';
 import ChannelDetailModal from '../components/ChannelDetailModal';
 
@@ -39,7 +40,7 @@ export default function SensorsPage() {
   const [health, setHealth] = useState(null);
   const [meta, setMeta] = useState(null);
   const [lastStreamPoint, setLastStreamPoint] = useState(null);
-  const [sensorThreshold, setSensorThreshold] = useState(0.5);
+  const { threshold: sensorThreshold, loaded: thresholdLoaded, updateFromStream } = useModelThreshold();
 
   // Modal states
   const [maximizedChart, setMaximizedChart] = useState(null); // 'group_stream' | 'root_cause' | null
@@ -54,9 +55,6 @@ export default function SensorsPage() {
     getModelMetadata()
       .then(res => {
         setMeta(res.data);
-        if (res.data?.threshold) {
-          setSensorThreshold(res.data.threshold);
-        }
       })
       .catch(() => {});
   }, []);
@@ -65,6 +63,9 @@ export default function SensorsPage() {
     try {
       const res = await getStreamData();
       const d = res.data;
+      if (d.threshold != null) {
+        updateFromStream(d.threshold);
+      }
       setLastStreamPoint(d);
       const now = new Date().toLocaleTimeString();
 
@@ -198,8 +199,8 @@ export default function SensorsPage() {
             const values = sensorValues[idx] || [];
             const lastVal = values.length > 0 ? values[values.length - 1] : 0;
             const errObj = latestErrors.find(e => e.sensor_index === idx);
-            // Sensor flagged elevated if error exceeds dynamically derived threshold
-            const isElevated = errObj && errObj.reconstruction_error > sensorThreshold;
+            // Sensor flagged elevated if threshold is loaded and error exceeds dynamically derived threshold
+            const isElevated = thresholdLoaded && errObj && errObj.reconstruction_error > sensorThreshold;
 
             return (
               <div
@@ -346,7 +347,7 @@ export default function SensorsPage() {
                     textfont: { color: '#cbd5e1', size: 10 },
                     cliponaxis: false,
                     marker: {
-                      color: sortedErrors.map(e => e.reconstruction_error > sensorThreshold ? '#ef4444' : '#6366f1'),
+                      color: sortedErrors.map(e => (thresholdLoaded && e.reconstruction_error > sensorThreshold) ? '#ef4444' : '#6366f1'),
                     },
                   },
                 ]}
@@ -449,6 +450,7 @@ export default function SensorsPage() {
       <ChartModal
         isOpen={maximizedChart === 'root_cause'}
         onClose={() => setMaximizedChart(null)}
+        threshold={sensorThreshold}
         title="Root Cause Analysis (Top Sensor Breakdown)"
         subtitle="Per-channel reconstruction error ranking (Click any bar to open channel deep-dive)"
         plotData={[
@@ -462,7 +464,7 @@ export default function SensorsPage() {
             textfont: { color: '#cbd5e1', size: 11 },
             cliponaxis: false,
             marker: {
-              color: sortedErrors.map(e => e.reconstruction_error > sensorThreshold ? '#ef4444' : '#6366f1'),
+              color: sortedErrors.map(e => (thresholdLoaded && e.reconstruction_error > sensorThreshold) ? '#ef4444' : '#6366f1'),
             },
           },
         ]}
