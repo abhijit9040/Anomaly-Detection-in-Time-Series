@@ -19,6 +19,9 @@ export default function SettingsPage() {
   const [soundStyle, setSoundStyle] = useState(
     () => localStorage.getItem('setting_sound_style') || 'industrial'
   );
+  const [alertMode, setAlertMode] = useState(
+    () => localStorage.getItem('setting_alert_mode') || 'smoothed'
+  );
   const [healthData, setHealthData] = useState(null);
   const [modelMeta, setModelMeta] = useState(null);
   const [latency, setLatency] = useState(null);
@@ -42,6 +45,7 @@ export default function SettingsPage() {
     localStorage.setItem('setting_stream_speed', streamSpeed);
     localStorage.setItem('setting_sound_alerts', soundAlerts.toString());
     localStorage.setItem('setting_sound_style', soundStyle);
+    localStorage.setItem('setting_alert_mode', alertMode);
     setSavedNotice(true);
     setTimeout(() => setSavedNotice(false), 2500);
   };
@@ -75,6 +79,24 @@ export default function SettingsPage() {
               <div className="card-subtitle">Local stream and alert configuration</div>
             </div>
             <div style={{ padding: '0 20px 20px' }}>
+              <div className="form-group" style={{ marginBottom: '18px' }}>
+                <label className="form-label">Alert Mode</label>
+                <select
+                  value={alertMode}
+                  onChange={e => setAlertMode(e.target.value)}
+                  className="form-input"
+                  style={{ background: 'var(--surface-2)', color: 'var(--text-primary)' }}
+                >
+                  <option value="smoothed">Smoothed (recommended)</option>
+                  <option value="raw">Raw</option>
+                </select>
+                <div style={{ fontSize: '11px', color: 'var(--text-muted)', marginTop: '4px' }}>
+                  {alertMode === 'smoothed'
+                    ? 'Uses post-processed alert_active for false-alarm reduction.'
+                    : 'Uses raw per-point flags with cooldown de-duplication.'}
+                </div>
+              </div>
+
               <div className="form-group" style={{ marginBottom: '18px' }}>
                 <label className="form-label">Stream Polling Rate</label>
                 <select

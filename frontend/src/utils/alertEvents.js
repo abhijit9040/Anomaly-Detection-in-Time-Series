@@ -23,3 +23,33 @@ export function advanceAlertState(state, isAnomaly, cooldown = ALERT_COOLDOWN) {
     isNewEvent: false,
   };
 }
+
+/**
+ * Advance alert state based on post-processed alert_active signal.
+ * Produces a new event ONLY on a rising edge (inactive -> active).
+ * If alert_active is null or undefined, falls back to raw-flag logic.
+ *
+ * @param {boolean|object} prevActive - Whether the alert was previously active
+ * @param {boolean|null|undefined} alertActive - Post-processed alert signal from model
+ * @param {boolean} [rawIsAnomaly=false] - Optional raw is_anomaly fallback flag
+ * @returns {{ isNewEvent: boolean, active: boolean }}
+ */
+export function advanceFromAlertActive(prevActive, alertActive, rawIsAnomaly = false) {
+  const wasActive = typeof prevActive === 'object' && prevActive !== null
+    ? Boolean(prevActive.active)
+    : Boolean(prevActive);
+
+  if (alertActive === null || alertActive === undefined) {
+    const isAnomaly = Boolean(rawIsAnomaly);
+    return {
+      isNewEvent: !wasActive && isAnomaly,
+      active: isAnomaly,
+    };
+  }
+
+  const currentActive = Boolean(alertActive);
+  return {
+    isNewEvent: !wasActive && currentActive,
+    active: currentActive,
+  };
+}

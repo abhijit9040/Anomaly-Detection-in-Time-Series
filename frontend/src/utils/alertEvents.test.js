@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { advanceAlertState, initialAlertState, ALERT_COOLDOWN } from './alertEvents';
+import { advanceAlertState, initialAlertState, ALERT_COOLDOWN, advanceFromAlertActive } from './alertEvents';
 
 function runSequence(sequence, cooldown = ALERT_COOLDOWN) {
   let state = initialAlertState;
@@ -89,5 +89,49 @@ describe('advanceAlertState', () => {
     const reopenStep = advanceAlertState(closeStep.state, true);
     expect(reopenStep.isNewEvent).toBe(true);
     expect(reopenStep.state.active).toBe(true);
+  });
+});
+
+describe('advanceFromAlertActive', () => {
+  it('detects rising edge as a new event', () => {
+    const res = advanceFromAlertActive(false, true);
+    expect(res).toEqual({ isNewEvent: true, active: true });
+  });
+
+  it('does not create a new event while staying active', () => {
+    const res = advanceFromAlertActive(true, true);
+    expect(res).toEqual({ isNewEvent: false, active: true });
+  });
+
+  it('handles falling then rising again', () => {
+    // Falling edge
+    const falling = advanceFromAlertActive(true, false);
+    expect(falling).toEqual({ isNewEvent: false, active: false });
+
+    // Staying inactive
+    const stayingInactive = advanceFromAlertActive(falling.active, false);
+    expect(stayingInactive).toEqual({ isNewEvent: false, active: false });
+
+    // Rising again
+    const risingAgain = advanceFromAlertActive(stayingInactive.active, true);
+    expect(risingAgain).toEqual({ isNewEvent: true, active: true });
+  });
+
+  it('falls back to raw flag when alert_active is null or undefined', () => {
+    // Null alertActive with raw is_anomaly true -> rising edge
+    expect(advanceFromAlertActive(false, null, true)).toEqual({ isNewEvent: true, active: true });
+
+    // Null alertActive with raw is_anomaly true while staying active
+    expect(advanceFromAlertActive(true, null, true)).toEqual({ isNewEvent: false, active: true });
+
+    // Null alertActive with raw is_anomaly false -> falling edge
+    expect(advanceFromAlertActive(true, null, false)).toEqual({ isNewEvent: false, active: false });
+
+    // Undefined alertActive with raw is_anomaly true -> rising edge
+    expect(advanceFromAlertActive(false, undefined, true)).toEqual({ isNewEvent: true, active: true });
+
+    // Null alertActive without 3rd parameter -> inactive
+    expect(advanceFromAlertActive(false, null)).toEqual({ isNewEvent: false, active: false });
+    expect(advanceFromAlertActive(true, undefined)).toEqual({ isNewEvent: false, active: false });
   });
 });

@@ -10,7 +10,7 @@ import {
   Maximize2, Pause, Play, RotateCcw, FlaskConical, Info, X
 } from 'lucide-react';
 import { checkHealth, getStreamData, detectBatch, getDemoWindows, jumpToAnomaly, injectAnomaly, resetStream, getModelMetadata } from '../services/api';
-import { advanceAlertState, initialAlertState } from '../utils/alertEvents';
+import { advanceAlertState, initialAlertState, advanceFromAlertActive } from '../utils/alertEvents';
 import { playAnomalyAlert, unlockAudio } from '../utils/audioAlert';
 import { useModelThreshold } from '../hooks/useModelThreshold';
 import ChartModal from '../components/ChartModal';
@@ -175,6 +175,12 @@ export default function Dashboard() {
   const [sensorValues, setSensorValues] = useState({});
   const [channelErrors, setChannelErrors] = useState({});
   const [anomalyCount, setAnomalyCount] = useState(0);
+  const [rawFlaggedCount, setRawFlaggedCount] = useState(0);
+  const [alertTriggers, setAlertTriggers] = useState([]); // [{ time, error }]
+  const [alertMode] = useState(
+    () => localStorage.getItem('setting_alert_mode') || 'smoothed'
+  );
+  const prevActiveRef = useRef(false);
   const [lastError, setLastError] = useState(null);
   const [streaming, setStreaming] = useState(false);
   const [recentAlerts, setRecentAlerts] = useState([]);
@@ -284,11 +290,28 @@ export default function Dashboard() {
         setAnomalyFlags(prev => [...prev.slice(-MAX_POINTS), d.is_anomaly]);
         setLastError(err);
 
+        if (d.is_anomaly) {
+          setRawFlaggedCount(c => c + 1);
+        }
+
         const smoothed = d.smoothed_error ?? err;
         setSmoothedErrors(prev => [...prev.slice(-MAX_POINTS), smoothed]);
 
-        const step = advanceAlertState(alertStateRef.current, d.is_anomaly);
-        alertStateRef.current = step.state;
+        let isNewEvent = false;
+        let isCurrentlyActive = false;
+
+        if (alertMode === 'smoothed') {
+          const step = advanceFromAlertActive(prevActiveRef.current, d.alert_active, d.is_anomaly);
+          prevActiveRef.current = step.active;
+          isNewEvent = step.isNewEvent;
+          isCurrentlyActive = step.active;
+        } else {
+          const step = advanceAlertState(alertStateRef.current, d.is_anomaly);
+          alertStateRef.current = step.state;
+          isNewEvent = step.isNewEvent;
+          isCurrentlyActive = step.state.active;
+        }
+
         const topSensor = top3[0]
           ? `${top3[0].sensor_name} (${top3[0].reconstruction_error.toFixed(3)})`
           : 'Ch-00';
@@ -296,16 +319,17 @@ export default function Dashboard() {
           ? threshold.toFixed(4)
           : (d.threshold != null ? Number(d.threshold).toFixed(4) : 'loading…');
 
-        if (step.isNewEvent) {
+        if (isNewEvent) {
           setAnomalyCount(c => c + 1);
           setLastAnomalyTime(Date.now());
           setLastAnomalyAgo(0);
           playAnomalyAlert();
+          setAlertTriggers(prev => [...prev.slice(-MAX_POINTS), { time: now, error: err }]);
           setRecentAlerts(prev => [{
             time: now, error: err.toFixed(4), errorNum: err,
             threshold: recordedThreshold, topSensor,
           }, ...prev.slice(0, 9)]);
-        } else if (d.is_anomaly) {
+        } else if (isCurrentlyActive) {
           setLastAnomalyAgo(0);
           setRecentAlerts(prev =>
             prev.length && err > prev[0].errorNum
@@ -372,6 +396,7 @@ export default function Dashboard() {
     try {
       const res = await jumpToAnomaly();
       alertStateRef.current = initialAlertState;
+      prevActiveRef.current = false;
       setStreamNotice(`Jumped to timestep ${res.data.current_index} — Real SMD anomaly incoming in ~7 seconds!`);
       setTimeout(() => setStreamNotice(null), 6000);
       if (!streaming && health?.model_loaded) startStream();
@@ -402,8 +427,11 @@ export default function Dashboard() {
     try {
       await resetStream();
       alertStateRef.current = initialAlertState;
+      prevActiveRef.current = false;
       setRecentAlerts([]);
+      setAlertTriggers([]);
       setAnomalyCount(0);
+      setRawFlaggedCount(0);
       setStreamNotice('Stream reset to normal baseline (Timestep 0).');
       setTimeout(() => setStreamNotice(null), 4000);
       if (!streaming && health?.model_loaded) startStream();
@@ -467,9 +495,22 @@ export default function Dashboard() {
       reconPlotData.push({
         x: anomalyX,
         y: anomalyY,
-        mode: 'markers', name: 'Anomaly Flag',
+        mode: 'markers', name: 'Raw Flag',
         marker: { color: '#ef4444', size: 7, symbol: 'circle' },
       });
+    }
+
+    if (alertTriggers.length > 0) {
+      const visibleTimes = new Set(reconXslice);
+      const visibleTriggers = alertTriggers.filter(t => visibleTimes.has(t.time));
+      if (visibleTriggers.length > 0) {
+        reconPlotData.push({
+          x: visibleTriggers.map(t => t.time),
+          y: visibleTriggers.map(t => t.error),
+          mode: 'markers', name: 'Alert Trigger',
+          marker: { color: '#f59e0b', size: 10, symbol: 'diamond', line: { color: '#ffffff', width: 1.5 } },
+        });
+      }
     }
   }
 
@@ -824,7 +865,26 @@ export default function Dashboard() {
               <div className="card-title">Anomaly Events Log</div>
               <div className="card-subtitle">One entry per anomaly event — for human review only</div>
             </div>
-            <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
+            <div style={{ display: 'flex', gap: '10px', alignItems: 'center', flexWrap: 'wrap' }}>
+              <div
+                title="Smoothed alerts start about 2 steps later by design"
+                style={{
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  gap: '6px',
+                  padding: '4px 10px',
+                  background: 'rgba(255, 255, 255, 0.04)',
+                  border: '1px solid rgba(255, 255, 255, 0.08)',
+                  borderRadius: '6px',
+                  fontSize: '12px',
+                  color: 'var(--text-secondary)',
+                  cursor: 'help',
+                }}
+              >
+                <span>Raw flagged points: <strong style={{ color: '#ef4444', fontVariantNumeric: 'tabular-nums' }}>{rawFlaggedCount}</strong></span>
+                <span style={{ color: 'var(--text-muted)' }}>|</span>
+                <span>Alerts: <strong style={{ color: '#f59e0b', fontVariantNumeric: 'tabular-nums' }}>{anomalyCount}</strong></span>
+              </div>
               <button
                 onClick={handleJumpToAnomaly}
                 disabled={actionLoading}
@@ -835,7 +895,7 @@ export default function Dashboard() {
               </button>
               {recentAlerts.length > 0 && (
                 <button
-                  onClick={() => setRecentAlerts([])}
+                  onClick={() => { setRecentAlerts([]); setAlertTriggers([]); }}
                   className="hdr-btn"
                 >
                   Clear
